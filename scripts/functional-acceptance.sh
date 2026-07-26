@@ -125,16 +125,17 @@ for slug in operations research production qa; do
       'any(.[]; .authorAgentId==$agent and
         (.body|contains("delegation-alpha")) and (.body|contains("delegation-beta")))' \
       <<<"$comments" >/dev/null && echo true || echo false)
-    grep -Eq '^(\[done\][[:space:]]*)?┊[[:space:]]+🔀[[:space:]]+delegate[[:space:]]+2x:' \
-      <<<"$run_log" ||
+    printf '%s\n' "$run_log" |
+      /opt/paperclip/ops/paperclip-tool-completion-check delegation ||
       delegation_pass=false
   else
     delegation_pass=true
   fi
   tool_pass=true
   if test "$slug" = research; then
-    grep -Eq '^(\[done\][[:space:]]*)?┊[[:space:]]+⚡[[:space:]]+web_searc[[:space:]]' \
-      <<<"$run_log" || tool_pass=false
+    printf '%s\n' "$run_log" |
+      /opt/paperclip/ops/paperclip-tool-completion-check web-search ||
+      tool_pass=false
   fi
   marker_pass=false
   marker_file=/srv/paperclip/workspaces/$slug/fresh-vm-acceptance.txt

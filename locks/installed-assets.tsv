@@ -13,6 +13,7 @@ fee19889a1b10a4e28bb3401d34fed6c85e7dcf24c7d00986d61e8b30e5f0657	files/ops/paper
 143eeb54397863e021765e61427d73c70642cb4b3675af166718308395b536af	files/ops/paperclip-offsite-sync.sh	/opt/paperclip/ops/paperclip-offsite-sync.sh
 415da4b0eeb0e34699864138a30535e7b404f7fdaff96f5e8acc4c99a98fa8c1	files/ops/paperclip-secret-audit.sh	/opt/paperclip/ops/paperclip-secret-audit.sh
 c67dde0e148aa6a4a94959ab8f197db37731252fa35cfd0bdd4aba16f65dff8f	files/ops/paperclip-soak-sample.sh	/opt/paperclip/ops/paperclip-soak-sample.sh
+2c2e5267baa8553bdcfcf6ede48f9d23435af98103f7568d08b9f0c293dcf1c7	files/ops/paperclip-tool-completion-check	/opt/paperclip/ops/paperclip-tool-completion-check
 f34cf18da88a1c76e75a2ff8c659ed89c2412b482c1efa69519664206e6aeb8a	files/ops/paperclip-upload-artifact	/opt/paperclip/ops/paperclip-upload-artifact
 41eb61ece1bfabfe46d21c233e305a194b36bc070c74263ca36227b383ca8e65	files/ops/paperclip-validate-remote-mount	/opt/paperclip/ops/paperclip-validate-remote-mount
 6091214434de196d9595bc8047b6e07e6d0d65f009a5ed117cfb9863287a6e18	files/ops/paperclip-verify-encrypted-backup.sh	/opt/paperclip/ops/paperclip-verify-encrypted-backup.sh
@@ -48,7 +49,7 @@ e692d9caefff952a6ef12296dccdf8080ae23c00b7bda0a2bd26e4737928f426	files/paperclip
 59de0c5b0879e2e5e4ad8b1fbc31fdc5d5bebbe707f20f3b4f253a6420130634	files/paperclip/AGENTS-research.md	/opt/paperclip/integration/paperclip/AGENTS-research.md
 e810e41a42d9d7b545179a6e5b8c1cb1552ee876bbbda63a661ae2c49b03cf31	files/paperclip/config.json	/opt/paperclip/integration/paperclip/config.json
 f41d7b261f6a6ae3095b46c02140676a3be504f0ed6cb51deeb6f55af6004c6e	files/paperclip/offsite-backup.conf.example	/opt/paperclip/integration/paperclip/offsite-backup.conf.example
-1e486b04dcd8cf64fa9f16744c10ebf12e3039e422b5d131fa2141d86f1937b9	scripts/functional-acceptance.sh	/opt/paperclip/ops/functional-acceptance.sh
+888cfb6057c362a64f36c44f84e69141d560b774daf9da9136cb02459a274454	scripts/functional-acceptance.sh	/opt/paperclip/ops/functional-acceptance.sh
 98d7ffc5f58e4e5b07472959a58417e88ba6f11bc7c4164692224d803af80553	scripts/profile-init	/usr/local/sbin/paperclip-hermes-profile-init
 ac9099e585694cb480911739d3e60c42e24fd50d50963a1c09bf9da2473fb23e	scripts/credential-install	/usr/local/sbin/paperclip-hermes-credential-install
 bb0009c4973c0b66e2edd53710dc2948c87b570fecfa51daca9fe606a569c892	verify.sh	/usr/local/sbin/paperclip-appliance-verify

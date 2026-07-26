@@ -1,0 +1,52 @@
+#!/bin/sh
+set -eu
+
+iptables=/usr/sbin/iptables
+subnet=172.30.0.0/24
+for specification in \
+  "-C DOCKER-USER -s $subnet -j PAPERCLIP-EGRESS" \
+  "-C PAPERCLIP-EGRESS -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN" \
+  "-C PAPERCLIP-EGRESS -d 10.0.0.0/8 -j REJECT --reject-with icmp-net-unreachable" \
+  "-C PAPERCLIP-EGRESS -d 100.64.0.0/10 -j REJECT --reject-with icmp-net-unreachable" \
+  "-C PAPERCLIP-EGRESS -d 127.0.0.0/8 -j REJECT --reject-with icmp-net-unreachable" \
+  "-C PAPERCLIP-EGRESS -d 169.254.0.0/16 -j REJECT --reject-with icmp-net-unreachable" \
+  "-C PAPERCLIP-EGRESS -d 172.16.0.0/12 -j REJECT --reject-with icmp-net-unreachable" \
+  "-C PAPERCLIP-EGRESS -d 192.168.0.0/16 -j REJECT --reject-with icmp-net-unreachable" \
+  "-C INPUT -s $subnet -j PAPERCLIP-HOST" \
+  "-C PAPERCLIP-HOST -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT" \
+  "-C PAPERCLIP-HOST -p tcp --dport 3100 -j ACCEPT" \
+  "-C PAPERCLIP-HOST -j REJECT --reject-with icmp-port-unreachable"
+do
+  # These tokens are fixed internally and never contain operator input.
+  # shellcheck disable=SC2086
+  $iptables -w $specification
+done
+
+expected_egress=$(printf '%s\n' \
+  '-N PAPERCLIP-EGRESS' \
+  '-A PAPERCLIP-EGRESS -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN' \
+  '-A PAPERCLIP-EGRESS -d 10.0.0.0/8 -j REJECT --reject-with icmp-net-unreachable' \
+  '-A PAPERCLIP-EGRESS -d 100.64.0.0/10 -j REJECT --reject-with icmp-net-unreachable' \
+  '-A PAPERCLIP-EGRESS -d 127.0.0.0/8 -j REJECT --reject-with icmp-net-unreachable' \
+  '-A PAPERCLIP-EGRESS -d 169.254.0.0/16 -j REJECT --reject-with icmp-net-unreachable' \
+  '-A PAPERCLIP-EGRESS -d 172.16.0.0/12 -j REJECT --reject-with icmp-net-unreachable' \
+  '-A PAPERCLIP-EGRESS -d 192.168.0.0/16 -j REJECT --reject-with icmp-net-unreachable' \
+  '-A PAPERCLIP-EGRESS -j RETURN')
+expected_host=$(printf '%s\n' \
+  '-N PAPERCLIP-HOST' \
+  '-A PAPERCLIP-HOST -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT' \
+  '-A PAPERCLIP-HOST -p tcp -m tcp --dport 3100 -j ACCEPT' \
+  '-A PAPERCLIP-HOST -j REJECT --reject-with icmp-port-unreachable')
+test "$($iptables -w -S PAPERCLIP-EGRESS)" = "$expected_egress"
+test "$($iptables -w -S PAPERCLIP-HOST)" = "$expected_host"
+test "$($iptables -w -S DOCKER-USER | sed -n '2p')" = \
+  "-A DOCKER-USER -s $subnet -j PAPERCLIP-EGRESS"
+test "$($iptables -w -S INPUT | sed -n '2p')" = \
+  "-A INPUT -s $subnet -j PAPERCLIP-HOST"
+
+image=$(sed -n 's/^HERMES_DOCKER_IMAGE=//p' /opt/paperclip/integration/build/appliance.lock)
+/usr/bin/docker run --rm --network paperclip-hermes \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --read-only --tmpfs /tmp:rw,noexec,nosuid,size=8m \
+  --volume /opt/paperclip/ops/paperclip-network-probe.py:/probe.py:ro \
+  --entrypoint python "$image" /probe.py

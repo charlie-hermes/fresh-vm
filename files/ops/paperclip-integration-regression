@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+lock=/opt/paperclip/integration/build/appliance.lock
+# shellcheck disable=SC1090
+. "$lock"
+root=/opt/hermes-agent/$HERMES_COMMIT
+test_root=/run/paperclip-integration-regression.$$
+mkdir -p "$test_root"
+trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
+cd "$root"
+PYTHONDONTWRITEBYTECODE=1 venv/bin/python -m pytest -q \
+  --basetemp "$test_root" \
+  tests/tools/test_file_tools_container_config.py \
+  tests/tools/test_docker_environment.py \
+  tests/agent/test_tool_executor_checkpoint_paths.py

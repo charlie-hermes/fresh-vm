@@ -2,21 +2,23 @@
 set -eu
 
 backup_root=/var/lib/paperclip/backups
-database_dir=$backup_root/database
-state_dir=$backup_root/state
 encrypted_dir=$backup_root/encrypted
 encryption_key=/etc/paperclip/backup-encryption.passphrase
-stamp=$(/usr/bin/date -u +%Y%m%d-%H%M%S)
+stamp=$(/usr/bin/date -u +%Y%m%d-%H%M%S)-$$
+work_dir=/run/paperclip-backup/$stamp
+database_dir=$work_dir/database
+state_dir=$work_dir/state
 export GNUPGHOME=$backup_root/.gnupg
 
 /usr/bin/mkdir -p "$database_dir" "$state_dir" "$encrypted_dir" "$GNUPGHOME"
 /usr/bin/chmod 0700 "$GNUPGHOME"
 /usr/bin/test -r "$encryption_key" || { echo "Backup encryption key is not readable" >&2; exit 1; }
+trap '/usr/bin/rm -rf -- "$work_dir"' EXIT HUP INT TERM
 
 /opt/paperclip/2026.720.0/node_modules/.bin/paperclipai db:backup \
   --config /var/lib/paperclip/instances/default/config.json \
   --dir "$database_dir" \
-  --retention-days 30 \
+  --retention-days 1 \
   --filename-prefix scheduled \
   --json
 
@@ -57,7 +59,11 @@ archive=$state_dir/state-$stamp.tar.gz
   etc/systemd/system/paperclip-network-policy.service \
   etc/docker/daemon.json \
   opt/paperclip/ops \
-  opt/paperclip/integration
+  opt/paperclip/integration \
+  etc/paperclip/company-name \
+  etc/paperclip/company-id \
+  etc/paperclip/hermes-agent-id \
+  etc/paperclip/hermes-agent-ids.json
 
 /usr/bin/gpg --batch --yes --pinentry-mode loopback --passphrase-file "$encryption_key" \
   --symmetric --cipher-algo AES256 --compress-algo none \
@@ -70,9 +76,6 @@ archive=$state_dir/state-$stamp.tar.gz
 /opt/paperclip/ops/paperclip-verify-encrypted-backup.sh \
   "$encrypted_dir/state-$stamp.tar.gz.gpg" \
   "$encrypted_dir/database-$stamp.sql.gz.gpg"
-/usr/bin/rm -f "$archive"
-/usr/bin/find "$state_dir" -type f -mtime +30 -delete
-/usr/bin/find "$database_dir" -type f -mtime +30 -delete
 /usr/bin/find "$encrypted_dir" -type f -mtime +30 -delete
 
 echo "Encrypted Paperclip backup created: $encrypted_dir/state-$stamp.tar.gz.gpg"

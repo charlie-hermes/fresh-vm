@@ -29,21 +29,30 @@ jq -e '
 ' "$auth_source" >/dev/null ||
   { echo "AUTH_JSON is not a valid Hermes credential file" >&2; exit 65; }
 
-if grep -Ev '^[[:space:]]*(#.*)?$|^PAPERCLIP_OFFSITE_REQUIRED=true$|^PAPERCLIP_OFFSITE_MOUNT=/[A-Za-z0-9._/-]+$' \
+if grep -Ev '^[[:space:]]*(#.*)?$|^PAPERCLIP_OFFSITE_REQUIRED=true$|^PAPERCLIP_OFFSITE_MOUNT=/[A-Za-z0-9._/-]+$|^PAPERCLIP_RECOVERY_ESCROW_MOUNT=/[A-Za-z0-9._/-]+$' \
     "$offsite_source" | grep -q .; then
   echo "OFFSITE_CONFIG contains unsupported or unsafe syntax" >&2
   exit 65
 fi
 test "$(grep -cx 'PAPERCLIP_OFFSITE_REQUIRED=true' "$offsite_source" || true)" -eq 1 ||
   { echo "OFFSITE_CONFIG must set PAPERCLIP_OFFSITE_REQUIRED=true" >&2; exit 65; }
-test "$(grep -c '^PAPERCLIP_OFFSITE_MOUNT=' "$offsite_source" || true)" -le 1 ||
-  { echo "OFFSITE_CONFIG may set PAPERCLIP_OFFSITE_MOUNT only once" >&2; exit 65; }
+test "$(grep -c '^PAPERCLIP_OFFSITE_MOUNT=' "$offsite_source" || true)" -eq 1 ||
+  { echo "OFFSITE_CONFIG must set PAPERCLIP_OFFSITE_MOUNT exactly once" >&2; exit 65; }
+test "$(grep -c '^PAPERCLIP_RECOVERY_ESCROW_MOUNT=' "$offsite_source" || true)" -eq 1 ||
+  { echo "OFFSITE_CONFIG must set PAPERCLIP_RECOVERY_ESCROW_MOUNT exactly once" >&2; exit 65; }
 offsite_mount=$(sed -n 's/^PAPERCLIP_OFFSITE_MOUNT=//p' "$offsite_source" | tail -n 1)
-: "${offsite_mount:=/mnt/paperclip-offsite}"
-mountpoint -q "$offsite_mount" ||
-  { echo "Off-host destination is not mounted: $offsite_mount" >&2; exit 69; }
+escrow_mount=$(sed -n 's/^PAPERCLIP_RECOVERY_ESCROW_MOUNT=//p' "$offsite_source" | tail -n 1)
+test "$offsite_mount" != "$escrow_mount" ||
+  { echo "Backup and recovery-key escrow must use different mounts" >&2; exit 65; }
+offsite_identity=$(/opt/paperclip/ops/paperclip-validate-remote-mount "$offsite_mount")
+escrow_identity=$(/opt/paperclip/ops/paperclip-validate-remote-mount "$escrow_mount")
+test "$(printf '%s' "$offsite_identity" | cut -f2)" != \
+     "$(printf '%s' "$escrow_identity" | cut -f2)" ||
+  { echo "Backup and recovery-key escrow must use different remote sources" >&2; exit 65; }
 test -d "$offsite_mount" && test -w "$offsite_mount" ||
   { echo "Off-host destination is not writable: $offsite_mount" >&2; exit 69; }
+test -d "$escrow_mount" && test -w "$escrow_mount" ||
+  { echo "Recovery-key escrow is not writable: $escrow_mount" >&2; exit 69; }
 
 install -o root -g paperclip -m 0640 "$offsite_source" \
   /etc/paperclip/offsite-backup.conf

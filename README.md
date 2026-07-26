@@ -35,23 +35,32 @@ PRODUCTION: READY
 
 ## Before installation
 
-Create an Ubuntu 24.04 LTS amd64 VM with at least 4 vCPUs, 6 GiB RAM, and
+Create an Ubuntu 24.04 LTS amd64 VM with at least 4 vCPUs, 12 GiB RAM, and
 30 GiB free disk. Install Codex manually and clone this repository. The
 installer creates 2 GiB swap if the VM has less than 1 GiB active swap.
 
 Prepare, but do not put in this repository:
 
 - a valid Hermes `auth.json`;
-- a mounted off-host backup filesystem;
+- two independently protected mounted remote filesystems: one for encrypted
+  backups and one for the recovery-key escrow;
 - an offsite configuration such as:
 
 ```ini
 PAPERCLIP_OFFSITE_REQUIRED=true
 PAPERCLIP_OFFSITE_MOUNT=/mnt/paperclip-offsite
+PAPERCLIP_RECOVERY_ESCROW_MOUNT=/mnt/paperclip-key-escrow
 ```
 
-The mount must already be a real remote filesystem and writable when
-`configure-secrets.sh` runs. A directory on the VM’s own disk does not count.
+Both mounts must already be supported remote filesystems, writable, and backed
+by different remote sources when `configure-secrets.sh` runs. A root, local,
+bind, or temporary filesystem does not count.
+
+To give each client a distinct company name, use the optional first command:
+
+```bash
+sudo env PAPERCLIP_COMPANY_NAME="Client Name" ./bootstrap.sh
+```
 
 ## What the build creates
 
@@ -82,12 +91,15 @@ target. One-time operator details are stored root-only at
 3. **Integrate secrets.** `configure-secrets.sh` validates and installs the
    provider credential, requires a real off-host mount, makes a fresh encrypted
    backup, verifies replication, and records the pre-reboot boot ID.
-4. **Reboot and accept.** `verify.sh` requires a new boot, then makes QA execute
-   a real assigned Paperclip task inside Docker. It verifies workspace I/O,
-   socket isolation, Paperclip identity, comment attribution, and completion.
+4. **Reboot and accept.** `verify.sh` requires a new boot, then makes all four
+   employee profiles execute role-appropriate real Paperclip tasks. It
+   independently verifies identity attribution, manager delegation, research
+   search, production/QA workspace mounts and socket isolation, comments, and
+   completion.
 5. **Release.** The same command scans persisted files and run logs for actual
    credential values, decrypts and inventories a fresh backup, verifies the
-   corresponding offsite copy, checks every systemd unit, and emits the six
+   corresponding offsite copy and separately escrowed recovery key, runs the
+   proprietary regression suite, checks every systemd unit, and emits the six
    release gates.
 
 ## Reproducibility and idempotency

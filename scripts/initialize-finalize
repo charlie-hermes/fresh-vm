@@ -11,6 +11,8 @@ api=$base/api
 template=/opt/paperclip/integration/paperclip
 factory=/usr/local/sbin/paperclip-hermes-profile-init
 credential_installer=/usr/local/sbin/paperclip-hermes-credential-install
+# shellcheck disable=SC1091
+. /opt/paperclip/integration/build/appliance.lock
 
 test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
 test -e "$pending" || exit 0
@@ -35,16 +37,18 @@ done
 curl --fail --silent --show-error --max-time 5 "$api/health" >/dev/null
 
 login() {
+  jq -n --arg e "$PAPERCLIP_OPERATOR_EMAIL" --arg p "$PAPERCLIP_OPERATOR_PASSWORD" \
+    '{email:$e,password:$p}' |
   curl --silent --show-error --max-time 10 -c "$cookie" \
     -H 'Content-Type: application/json' -H "Origin: $base" \
-    --data "$(jq -n --arg e "$PAPERCLIP_OPERATOR_EMAIL" --arg p "$PAPERCLIP_OPERATOR_PASSWORD" \
-      '{email:$e,password:$p}')" "$api/auth/sign-in/email" >"$body"
+    --data-binary @- "$api/auth/sign-in/email" >"$body"
 }
 if ! login || ! jq -e '.user.id | type == "string"' "$body" >/dev/null 2>&1; then
+  jq -n --arg e "$PAPERCLIP_OPERATOR_EMAIL" --arg p "$PAPERCLIP_OPERATOR_PASSWORD" \
+    '{name:"Paperclip Administrator",email:$e,password:$p}' |
   curl --fail --silent --show-error --max-time 10 -c "$cookie" \
     -H 'Content-Type: application/json' -H "Origin: $base" \
-    --data "$(jq -n --arg e "$PAPERCLIP_OPERATOR_EMAIL" --arg p "$PAPERCLIP_OPERATOR_PASSWORD" \
-      '{name:"Paperclip Administrator",email:$e,password:$p}')" \
+    --data-binary @- \
     "$api/auth/sign-up/email" >"$body"
   jq -e '.user.id | type == "string"' "$body" >/dev/null
 fi
@@ -77,20 +81,21 @@ api_call() {
   method=$1
   path=$2
   data=${3:-}
-  args=(--fail --silent --show-error --max-time 20 -X "$method"
-    -H "Authorization: Bearer $PAPERCLIP_BOARD_API_KEY")
   if [ -n "$data" ]; then
-    args+=(-H 'Content-Type: application/json' --data "$data")
+    printf '%s' "$data" | /opt/paperclip/ops/paperclip-board-api "$method" "$path" -
+  else
+    /opt/paperclip/ops/paperclip-board-api "$method" "$path"
   fi
-  curl "${args[@]}" "$api$path"
 }
 
 if [ ! -f /etc/paperclip/company-id ]; then
+  company_name=$(cat /etc/paperclip/company-name)
   company_id=$(api_call GET /companies |
-    jq -r '.[] | select(.name=="Paperclip Operations") | .id' | head -n 1)
+    jq -r --arg name "$company_name" '.[] | select(.name==$name) | .id' | head -n 1)
   if [ -z "$company_id" ]; then
-    api_call POST /companies \
-      '{"name":"Paperclip Operations","description":"Clean Hermes/Paperclip appliance workspace"}' >"$body"
+    company_payload=$(jq -nc --arg name "$company_name" \
+      '{name:$name,description:"Private Hermes/Paperclip client appliance"}')
+    api_call POST /companies "$company_payload" >"$body"
     company_id=$(jq -er '.id' "$body")
   fi
   printf '%s\n' "$company_id" > /etc/paperclip/company-id
@@ -107,9 +112,7 @@ create_agent() {
   title=$5
   reports_to=$6
   instructions=$7
-  if [ ! -d "/var/lib/paperclip/agents/$slug" ]; then
-    "$factory" "$slug" "$role_pack" >/dev/null
-  fi
+  "$factory" "$slug" "$role_pack" >/dev/null
   agent_id=$(api_call GET "/companies/$company_id/agents" |
     jq -r --arg name "$name" '.[] | select(.name==$name) | .id' | head -n 1)
   if [ -z "$agent_id" ]; then
@@ -117,12 +120,13 @@ create_agent() {
     --arg name "$name" --arg role "$role" --arg title "$title" \
     --arg cwd "/srv/paperclip/workspaces/$slug" \
     --arg home "/var/lib/paperclip/agents/$slug/home" \
+    --arg hermesCommand "/opt/hermes-agent/$HERMES_COMMIT/venv/bin/hermes" \
     --arg reports "$reports_to" \
     '{
       name:$name, role:$role, title:$title, adapterType:"hermes_local",
       adapterConfig:{
         cwd:$cwd, env:{HERMES_HOME:{type:"plain",value:$home}},
-        hermesCommand:"/opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9/venv/bin/hermes",
+        hermesCommand:$hermesCommand,
         provider:"openai-codex", model:"gpt-5.6-sol",
         maxTurnsPerRun:40, timeoutSec:900, graceSec:20,
         persistSession:true, checkpoints:true, quiet:true, verbose:false,
@@ -131,7 +135,7 @@ create_agent() {
         instructionsBundleMode:"managed", instructionsEntryFile:"AGENTS.md"
       },
       runtimeConfig:{heartbeat:{enabled:false,maxConcurrentRuns:1}},
-      permissions:{canCreateAgents:($role=="pm"),canCreateSkills:true,trustPreset:"standard"}
+      permissions:{canCreateAgents:false,canCreateSkills:false,trustPreset:"standard"}
     } + (if $reports=="" then {} else {reportsTo:$reports} end)')
     api_call POST "/companies/$company_id/agents" "$payload" >"$body"
     agent_id=$(jq -er '.id' "$body")
@@ -215,8 +219,10 @@ If Hermes credential is REQUIRED, run:
 EOF
 chmod 0600 /root/paperclip-firstboot-credentials
 
-rm -rf -- "$bootstrap"
+complete_tmp=$(mktemp "$state/.complete.XXXXXX")
+date -u +%Y-%m-%dT%H:%M:%SZ >"$complete_tmp"
+chmod 0600 "$complete_tmp"
+mv -f "$complete_tmp" "$state/complete"
 rm -f -- "$pending"
-date -u +%Y-%m-%dT%H:%M:%SZ > "$state/complete"
-chmod 0600 "$state/complete"
+rm -rf -- "$bootstrap"
 echo "Paperclip clone initialization complete"

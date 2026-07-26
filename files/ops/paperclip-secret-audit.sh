@@ -58,12 +58,16 @@ sort -u -o "$file_matches" "$file_matches"
 runs_scanned=0
 secret_log_matches=0
 raw_bearer_occurrences=0
+generic_token_occurrences=0
 run_ids=$work/run-ids
 : >"$run_ids"
 while IFS= read -r company; do
   while IFS= read -r agent_id; do
-    /opt/paperclip/ops/paperclip-board-api GET "/companies/$company/heartbeat-runs?agentId=$agent_id&limit=30" \
-      | jq -r '.[].id' >>"$run_ids"
+    agent_runs=$(/opt/paperclip/ops/paperclip-board-api GET \
+      "/companies/$company/heartbeat-runs?agentId=$agent_id&limit=1000")
+    test "$(jq 'length' <<<"$agent_runs")" -lt 1000 ||
+      { echo "Run-log audit exceeds API retention window for agent $agent_id" >&2; exit 1; }
+    jq -r '.[].id' <<<"$agent_runs" >>"$run_ids"
   done < <(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company/agents" | jq -r '.[].id')
 done < <(/opt/paperclip/ops/paperclip-board-api GET /companies | jq -r '.[].id')
 sort -u -o "$run_ids" "$run_ids"
@@ -78,6 +82,10 @@ while IFS= read -r run_id; do
     fi
     bearer_count=$(grep -Eoc 'Authorization:[[:space:]]*Bearer[[:space:]]+[A-Za-z0-9_.-]{12,}' "$log_file" || true)
     raw_bearer_occurrences=$((raw_bearer_occurrences + bearer_count))
+    generic_count=$(grep -Eoc \
+      'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|PAPERCLIP_API_KEY[=:][[:space:]]*[A-Za-z0-9_.-]{20,}' \
+      "$log_file" || true)
+    generic_token_occurrences=$((generic_token_occurrences + generic_count))
   fi
 done <"$run_ids"
 
@@ -91,8 +99,9 @@ jq -nc \
   --argjson runsScanned "$runs_scanned" \
   --argjson runLogsWithActualSecretMatches "$secret_log_matches" \
   --argjson rawBearerOccurrences "$raw_bearer_occurrences" \
+  --argjson genericTokenSignatureOccurrences "$generic_token_occurrences" \
   --slurpfile matchedFiles <(jq -Rsc 'split("\n")|map(select(length>0))' "$file_matches") \
-  '{timestamp:$timestamp,credentialValuesCompared:$credentialValuesCompared,filesWithActualSecretMatches:$filesWithActualSecretMatches,matchedFiles:($matchedFiles[0] // []),runsScanned:$runsScanned,runLogsWithActualSecretMatches:$runLogsWithActualSecretMatches,rawBearerOccurrences:$rawBearerOccurrences,pass:($filesWithActualSecretMatches==0 and $runLogsWithActualSecretMatches==0 and $rawBearerOccurrences==0 and $runsScanned>0)}' \
+  '{timestamp:$timestamp,credentialValuesCompared:$credentialValuesCompared,filesWithActualSecretMatches:$filesWithActualSecretMatches,matchedFiles:($matchedFiles[0] // []),runsScanned:$runsScanned,runLogsWithActualSecretMatches:$runLogsWithActualSecretMatches,rawBearerOccurrences:$rawBearerOccurrences,genericTokenSignatureOccurrences:$genericTokenSignatureOccurrences,pass:($filesWithActualSecretMatches==0 and $runLogsWithActualSecretMatches==0 and $rawBearerOccurrences==0 and $genericTokenSignatureOccurrences==0 and $runsScanned>0)}' \
   >"$output"
 chmod 0640 "$output"
 jq . "$output"

@@ -7,12 +7,11 @@ repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 . "$repo/appliance.lock"
 cd "$repo"
 
-if [ -f MANIFEST.sha256 ]; then
-  sha256sum --check --strict MANIFEST.sha256 >/dev/null
-fi
+test -f MANIFEST.sha256
+sha256sum --check --strict MANIFEST.sha256 >/dev/null
 
 for script in bootstrap.sh configure-secrets.sh verify.sh scripts/* \
-  files/factory/skills/paperclip-employee/scripts/*; do
+  files/factory/skills/paperclip-employee/scripts/* tests/*.sh; do
   case "$script" in *.md) continue ;; esac
   bash -n "$script"
 done
@@ -38,6 +37,13 @@ while IFS=$'\t' read -r component _ final relative; do
   test -f "$target"
   test "$(sha256sum "$target" | awk '{print $1}')" = "$final"
 done <locks/overlays.tsv
+
+while IFS=$'\t' read -r expected source destination; do
+  test -f "$source"
+  test "${destination#/}" != "$destination"
+  test "$(sha256sum "$source" | awk '{print $1}')" = "$expected"
+done <locks/installed-assets.tsv
+test "$(tests/generate-installed-assets.sh)" = "$(cat locks/installed-assets.tsv)"
 
 if git ls-files --others --cached --exclude-standard 2>/dev/null |
    grep -E '(^|/)(auth\.json|\.env|hermes\.env|offsite-backup\.conf)$' >/dev/null; then

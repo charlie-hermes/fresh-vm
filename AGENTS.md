@@ -20,7 +20,7 @@ Do not claim completion if any line is absent.
 ## Supported target
 
 - Ubuntu 24.04 LTS (`noble`), amd64.
-- At least 4 vCPUs, 6 GiB RAM, and 30 GiB free on `/`.
+- At least 4 vCPUs, 12 GiB RAM, and 30 GiB free on `/`.
 - Internet access to Ubuntu, NodeSource, npm, GitHub, Python package indexes,
   and the Docker registry during installation.
 - Codex is already installed by the operator.
@@ -35,8 +35,9 @@ Two secrets/integrations are intentionally absent from Git:
 
 1. A valid Hermes `auth.json`, supplied by an absolute path to a root-readable
    regular file.
-2. A root-readable offsite configuration whose mount is a real, currently
-   mounted off-host filesystem.
+2. A root-readable offsite configuration naming two different, currently
+   mounted remote filesystems: encrypted backup storage and independent
+   recovery-key escrow.
 
 If the operator has not supplied both paths, run only the bootstrap and then
 ask for those two paths. Never paste their contents into chat, a command line,
@@ -74,8 +75,9 @@ or replace an acceptance gate to make a rerun pass.
 - Preserve strict local secret encryption, JWT legacy-fallback denial, the
   Docker egress policy, global concurrency cap, encrypted backups, and required
   verified offsite replication.
-- The post-reboot functional run must be performed by the QA employee. Static
-  checks alone are not acceptance.
+- Post-reboot functional runs must be performed by all four employees and
+  independently inspected from the host. Static checks alone are not
+  acceptance.
 - Never commit credentials, generated instance data, evidence, or backup
   artifacts.
 

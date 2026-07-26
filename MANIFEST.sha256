@@ -1,11 +1,6 @@
 fb1a20674b0e0c15a3545eaad301e7b0a465642c75191e242cc7f22191e54ab9  ./.gitattributes
 74cbae5beb31f88a0fa893f3f02a1640f71d350b44e6823b8c6428558f787c92  ./.github/workflows/static.yml
 ed78bca5c0b71a02f49fea1de9da9efdf77c1a63c21ec340b94ce8e0b094580e  ./.gitignore
-3ed731b65d06150c138e2dadb0be0697550888a6b47eb8c45ecc9adba8b8e9bd  ./.pytest_cache/.gitignore
-37dc88ef9a0abeddbe81053a6dd8fdfb13afb613045ea1eb4a5c815a74a3bde4  ./.pytest_cache/CACHEDIR.TAG
-73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad  ./.pytest_cache/README.md
-44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a  ./.pytest_cache/v/cache/lastfailed
-5568abcabdfd85610ceff74b24b5da2492ad2ad53da089466478e94944dc308f  ./.pytest_cache/v/cache/nodeids
 bd231cdd1a7087827d049c50df638ae0f9c7612d0050ce8c15773595b3089751  ./AGENTS.md
 d61a1db31017aa5a2601548678ea607c31341234778e3212e30c8569ddef4afa  ./LICENSE
 8a39645e353ca84b3cf703ee40fb57b38a736a1277494ce3711560aa36c5305f  ./README.md
@@ -94,6 +89,7 @@ ac9099e585694cb480911739d3e60c42e24fd50d50963a1c09bf9da2473fb23e  ./scripts/cred
 5838af7612fe42ce2f970e4753c04c38c8140ed73f861ed4feae44d6f3286f28  ./scripts/initialize-pre
 98d7ffc5f58e4e5b07472959a58417e88ba6f11bc7c4164692224d803af80553  ./scripts/profile-init
 b640e5db4a5f67abdd31ac1e2f3f7bdc94c438157bfaf53d4f8127e4d181b78b  ./tests/generate-installed-assets.sh
-a41af7dcc533d8e501e51fd8ec7ee2c930c4e3e91cb24fb590ada8c83de09d73  ./tests/static.sh
+aec535ad5bb543925f6709a429a40b9277458f05e148461f795d4c0406ffac2e  ./tests/generate-manifest.sh
+e3d87b0d306ddcbaad206f3807cffdaefad9cc8c67a63278c6e4774cd4beb9bd  ./tests/static.sh
 8ba3c8dbf852282b61b7d9684001337b1b453e87e322965e74af218a1a146bda  ./tests/upstream.sh
 3dbc6054e960d3f1b54c7b1964f1243324a6d416001086eccf30b1184e3eacf6  ./verify.sh

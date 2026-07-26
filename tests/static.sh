@@ -9,6 +9,7 @@ cd "$repo"
 
 test -f MANIFEST.sha256
 sha256sum --check --strict MANIFEST.sha256 >/dev/null
+test "$(tests/generate-manifest.sh)" = "$(cat MANIFEST.sha256)"
 
 for script in bootstrap.sh configure-secrets.sh verify.sh scripts/* \
   files/factory/skills/paperclip-employee/scripts/* tests/*.sh; do

@@ -1,0 +1,52 @@
+[Unit]
+Description=Paperclip AI orchestration service
+Documentation=https://paperclip.ing/
+Wants=network-online.target
+After=network-online.target docker.service containerd.service paperclip-network-policy.service
+Requires=docker.service paperclip-network-policy.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=paperclip
+Group=paperclip
+SupplementaryGroups=docker
+WorkingDirectory=/var/lib/paperclip
+Environment=HOME=/var/lib/paperclip
+Environment=HERMES_HOME=/var/lib/paperclip/.hermes
+Environment=HERMES_FORCE_SYNC_DELEGATION=1
+Environment=NODE_ENV=production
+Environment=PATH=/opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin
+EnvironmentFile=-/etc/paperclip/paperclip.env
+ExecStartPre=/usr/bin/test -S /run/docker.sock
+ExecStart=/opt/paperclip/2026.720.0/node_modules/.bin/paperclipai run -d /var/lib/paperclip -i default --no-repair
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=120
+TimeoutStopSec=45
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/paperclip /srv/paperclip/workspaces
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+TasksMax=2048
+MemoryMax=4G
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

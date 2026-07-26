@@ -1,0 +1,3 @@
+# Off-site backup is intentionally unconfigured in the portable image.
+# Mount a real remote filesystem at /mnt/paperclip-offsite, then set true.
+PAPERCLIP_OFFSITE_REQUIRED=false

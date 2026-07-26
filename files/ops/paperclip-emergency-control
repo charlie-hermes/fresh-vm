@@ -1,0 +1,94 @@
+#!/bin/bash
+set -euo pipefail
+
+test "$(id -u)" -eq 0 || { echo "paperclip-emergency-control must run as root" >&2; exit 77; }
+action=${1:-status}
+state_dir=/var/lib/paperclip/emergency-stop
+state_file=$state_dir/state.json
+board=/opt/paperclip/ops/paperclip-board-api
+
+mkdir -p "$state_dir"
+chmod 0700 "$state_dir"
+
+list_companies() { "$board" GET /companies; }
+list_agents() { "$board" GET "/companies/$1/agents"; }
+list_live_runs() { "$board" GET "/companies/$1/live-runs"; }
+
+show_status() {
+  local companies live=0 paused=0 containers
+  companies=$(list_companies)
+  while IFS= read -r company_id; do
+    live=$((live + $(list_live_runs "$company_id" | jq 'length')))
+    paused=$((paused + $(list_agents "$company_id" | jq '[.[] | select(.status == "paused")] | length')))
+  done < <(jq -r '.[].id' <<<"$companies")
+  containers=$(docker ps -q --filter label=hermes-agent=1 | wc -l)
+  jq -n \
+    --argjson armed "$(test -f "$state_file" && jq -r '.armed // false' "$state_file" || echo false)" \
+    --argjson companies "$(jq 'length' <<<"$companies")" \
+    --argjson liveRuns "$live" \
+    --argjson pausedAgents "$paused" \
+    --argjson runningHermesContainers "$containers" \
+    '{armed:$armed,companies:$companies,liveRuns:$liveRuns,pausedAgents:$pausedAgents,runningHermesContainers:$runningHermesContainers}'
+}
+
+case "$action" in
+  status)
+    show_status
+    ;;
+  stop)
+    if test -f "$state_file" && test "$(jq -r '.armed // false' "$state_file")" = true; then
+      show_status
+      exit 0
+    fi
+
+    companies=$(list_companies)
+    agent_parts=()
+    while IFS= read -r company_id; do
+      part=$(mktemp)
+      list_agents "$company_id" | jq --arg companyId "$company_id" '[.[] | select(.status != "paused") | {id,companyId:$companyId,previousStatus:.status}]' >"$part"
+      agent_parts+=("$part")
+    done < <(jq -r '.[].id' <<<"$companies")
+
+    tmp_state=$(mktemp)
+    jq -s --arg stoppedAt "$(date -u +%FT%TZ)" '{armed:true,stoppedAt:$stoppedAt,agents:add}' "${agent_parts[@]}" >"$tmp_state"
+    install -o root -g root -m 0600 "$tmp_state" "$state_file"
+    rm -f "$tmp_state" "${agent_parts[@]}"
+
+    while IFS= read -r agent_id; do
+      jq -nc '{status:"paused"}' | "$board" PATCH "/agents/$agent_id" - >/dev/null
+    done < <(jq -r '.agents[].id' "$state_file")
+
+    for _ in 1 2; do
+      while IFS= read -r company_id; do
+        while IFS= read -r run_id; do
+          jq -nc '{}' | "$board" POST "/heartbeat-runs/$run_id/cancel" - >/dev/null || true
+        done < <(list_live_runs "$company_id" | jq -r '.[].id')
+      done < <(jq -r '.[].id' <<<"$companies")
+    done
+
+    mapfile -t container_ids < <(docker ps -q --filter label=hermes-agent=1)
+    if test "${#container_ids[@]}" -gt 0; then
+      docker stop --time 10 "${container_ids[@]}" >/dev/null
+    fi
+    show_status
+    ;;
+  resume)
+    test -f "$state_file" || { echo "no emergency-stop state exists" >&2; exit 66; }
+    test "$(jq -r '.armed // false' "$state_file")" = true || { show_status; exit 0; }
+    while IFS= read -r agent_id; do
+      current=$($board GET "/agents/$agent_id" | jq -r '.status')
+      if test "$current" = paused; then
+        jq -nc '{status:"idle"}' | "$board" PATCH "/agents/$agent_id" - >/dev/null
+      fi
+    done < <(jq -r '.agents[].id' "$state_file")
+    tmp_state=$(mktemp)
+    jq --arg resumedAt "$(date -u +%FT%TZ)" '.armed=false | .resumedAt=$resumedAt' "$state_file" >"$tmp_state"
+    install -o root -g root -m 0600 "$tmp_state" "$state_file"
+    rm -f "$tmp_state"
+    show_status
+    ;;
+  *)
+    echo "usage: paperclip-emergency-control {status|stop|resume}" >&2
+    exit 64
+    ;;
+esac

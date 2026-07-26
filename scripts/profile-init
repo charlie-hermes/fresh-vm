@@ -1,0 +1,51 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+slug=${1:-}
+role=${2:-}
+case "$slug" in ''|*[!a-z0-9-]*) echo "invalid profile slug" >&2; exit 64;; esac
+case "$role" in
+  operations-manager|research-strategy|production-specialist|qa-reviewer) ;;
+  *) echo "invalid role pack" >&2; exit 64;;
+esac
+
+factory=/opt/paperclip/integration/factory
+profile_root=/var/lib/paperclip/agents/$slug
+home=$profile_root/home
+workspace=/srv/paperclip/workspaces/$slug
+
+test ! -e "$profile_root" || { echo "profile already exists: $profile_root" >&2; exit 73; }
+install -d -o paperclip -g paperclip -m 0700 \
+  "$home" "$home/skills" "$home/skills/paperclip-employee/scripts" \
+  "$home/skills/$role" "$home/logs" "$home/sessions" "$home/memories" \
+  "$home/checkpoints" "$home/sandboxes" "$home/cache" "$workspace"
+install -o paperclip -g paperclip -m 0600 "$factory/config.yaml.template" "$home/config.yaml"
+sed -i "s/__PROFILE_SLUG__/$slug/g" "$home/config.yaml"
+
+case "$role" in
+  operations-manager) remove_tools=(code_execution image_gen vision) ;;
+  research-strategy) remove_tools=(code_execution delegation image_gen) ;;
+  production-specialist) remove_tools=(delegation session_search) ;;
+  qa-reviewer) remove_tools=(delegation image_gen) ;;
+esac
+for tool in "${remove_tools[@]}"; do
+  sed -i "/^platform_toolsets:/,/^  telegram:/ {/^    - $tool$/d;}" "$home/config.yaml"
+done
+
+install -o paperclip -g paperclip -m 0600 \
+  "$factory/roles/$role/SKILL.md" "$home/skills/$role/SKILL.md"
+install -o paperclip -g paperclip -m 0600 \
+  "$factory/skills/paperclip-employee/SKILL.md" \
+  "$home/skills/paperclip-employee/SKILL.md"
+for helper in paperclip-checkout paperclip-issue-update paperclip-upload-artifact.sh; do
+  install -o paperclip -g paperclip -m 0700 \
+    "$factory/skills/paperclip-employee/scripts/$helper" \
+    "$home/skills/paperclip-employee/scripts/$helper"
+done
+install -o paperclip -g paperclip -m 0600 /dev/null "$home/.no-bundled-skills"
+install -o paperclip -g paperclip -m 0600 /dev/null "$home/CREDENTIAL_REQUIRED"
+
+echo "created profile=$slug role=$role home=$home workspace=$workspace"

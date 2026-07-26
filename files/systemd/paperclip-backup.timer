@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule daily Paperclip database backups
+
+[Timer]
+OnCalendar=*-*-* 02:17:00 UTC
+RandomizedDelaySec=10min
+Persistent=true
+Unit=paperclip-backup.service
+
+[Install]
+WantedBy=timers.target

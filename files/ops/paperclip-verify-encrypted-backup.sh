@@ -23,6 +23,8 @@ gzip -t "$work_dir/database.sql.gz"
 grep -qx 'var/lib/paperclip/instances/default/config.json' "$work_dir/inventory"
 grep -qx 'var/lib/paperclip/instances/default/secrets/master.key' "$work_dir/inventory"
 grep -q '/skills/paperclip-employee/SKILL.md$' "$work_dir/inventory"
+grep -qx 'etc/paperclip/company-id' "$work_dir/inventory"
+grep -qx 'etc/paperclip/hermes-agent-ids.json' "$work_dir/inventory"
 if grep -Eq '/home/(auth\.json|\.env)$|/home/logs/' "$work_dir/inventory"; then
   echo "Credential or log path unexpectedly present in encrypted state backup" >&2
   exit 1

@@ -9,7 +9,7 @@
     "embeddedPostgresDataDir": "/var/lib/paperclip/instances/default/db",
     "embeddedPostgresPort": 54329,
     "backup": {
-      "enabled": true,
+      "enabled": false,
       "intervalMinutes": 60,
       "retentionDays": 30,
       "dir": "/var/lib/paperclip/instances/default/data/backups"

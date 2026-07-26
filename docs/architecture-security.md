@@ -94,6 +94,7 @@ health check's 85% disk threshold.
 - OpenAI Codex OAuth reports token counters and subscription-included cost (`0.0`), not a metered dollar charge.
 - Persistent containers are shared only within the same agent-home/task identity. Concurrent mutation of one shared workspace/package tree still requires per-task worktrees or separate profiles.
 - Docker membership makes the `paperclip` service account root-equivalent. Network and systemd restrictions reduce accidental exposure but do not make Docker socket access a security boundary against a compromised service account.
-- Production acceptance requires a real mounted off-host destination and a
-  checksum-verified copy of the latest encrypted database and state backups.
+- Production acceptance requires separate remote backup and recovery-key
+  escrow sources, plus a checksum-verified copy of the latest encrypted
+  database and state backups.
 - On full VM shutdown, Paperclip 2026.720.0 may log a graceful-run-drain query warning if its embedded PostgreSQL socket closes first. The accepted reboot had zero active runs, clean systemd deactivation, healthy database recovery, and a successful post-boot production heartbeat; treat the warning as an ordering limitation and confirm no active runs before planned reboot.

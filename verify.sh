@@ -49,6 +49,8 @@ platform_check() {
   systemctl is-active --quiet docker.service || fail "Docker inactive"
   systemctl is-active --quiet containerd.service || fail "containerd inactive"
   systemctl is-active --quiet paperclip-network-policy.service || fail "network policy inactive"
+  /opt/paperclip/ops/paperclip-network-verify >/dev/null ||
+    fail "network policy rules or live probes"
   systemctl is-active --quiet paperclip.service || fail "Paperclip inactive"
   systemctl is-enabled --quiet paperclip.service || fail "Paperclip not enabled"
   for timer in paperclip-backup.timer paperclip-health.timer \
@@ -88,6 +90,7 @@ platform_check() {
   test -f /var/lib/paperclip-appliance/complete || fail "initialization marker missing"
   test ! -e /var/lib/paperclip-appliance/pending || fail "pending initialization marker remains"
   jq -e '.secrets.strictMode==true and .auth.disableSignUp==true and
+    .database.backup.enabled==false and
     .server.exposure=="private" and .server.host=="172.30.0.1"' \
     /var/lib/paperclip/instances/default/config.json >/dev/null ||
     fail "Paperclip security configuration"
@@ -102,7 +105,13 @@ platform_check() {
   agents=$(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company_id/agents")
   test "$(jq '[.[] | select(.adapterType=="hermes_local")]|length' <<<"$agents")" -eq 4 ||
     fail "Hermes employee count"
+  jq -e 'all(.[];
+    .permissions.canCreateAgents==false and
+    .permissions.canCreateSkills==false)' <<<"$agents" >/dev/null ||
+    fail "Hermes employee authority drift"
   for slug in operations research production qa; do
+    test -f "/var/lib/paperclip/agents/$slug/.PROFILE_READY" ||
+      fail "incomplete $slug profile"
     test -f "/var/lib/paperclip/agents/$slug/home/config.yaml" ||
       fail "missing $slug profile"
     test -d "/srv/paperclip/workspaces/$slug" || fail "missing $slug workspace"
@@ -119,6 +128,12 @@ platform_check() {
     esac
     hash_is "$target" "$final" || fail "installed overlay drift: $relative"
   done <"$overlay_manifest"
+  while IFS=$'\t' read -r expected _ destination; do
+    hash_is "$destination" "$expected" ||
+      fail "installed appliance asset drift: $destination"
+  done </opt/paperclip/integration/build/locks/installed-assets.tsv
+  /opt/paperclip/ops/paperclip-integration-regression >/dev/null ||
+    fail "proprietary Hermes integration regression suite"
 }
 
 platform_check
@@ -147,7 +162,9 @@ grep -qx 'PAPERCLIP_OFFSITE_REQUIRED=true' /etc/paperclip/offsite-backup.conf ||
   fail "required off-host backup is not configured"
 
 /opt/paperclip/ops/functional-acceptance.sh
-jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot' \
+jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
+  .queuedObserved==true and .maxConcurrentObserved==2 and
+  (.roles|length)==4 and all(.roles[];.pass==true)' \
   /var/lib/paperclip/acceptance-evidence/functional-acceptance.json >/dev/null ||
   fail "functional evidence"
 echo "FUNCTIONAL ACCEPTANCE: PASS"
@@ -155,7 +172,7 @@ echo "FUNCTIONAL ACCEPTANCE: PASS"
 /opt/paperclip/ops/paperclip-secret-audit.sh >/dev/null
 jq -e '.pass==true and .credentialValuesCompared>0 and .runsScanned>0 and
   .filesWithActualSecretMatches==0 and .runLogsWithActualSecretMatches==0 and
-  .rawBearerOccurrences==0' \
+  .rawBearerOccurrences==0 and .genericTokenSignatureOccurrences==0' \
   /var/lib/paperclip/acceptance-evidence/secret-audit.json >/dev/null ||
   fail "secret audit evidence"
 echo "SECRET AUDIT: PASS"
@@ -175,7 +192,11 @@ latest_database=$(find /var/lib/paperclip/backups/encrypted -maxdepth 1 \
 jq -e --arg instance "$instance_id" --arg state "$latest_state" \
   --arg database "$latest_database" \
   '.verified==true and .instanceId==$instance and
-   .latestState==$state and .latestDatabase==$database' "$offsite_status" >/dev/null ||
+   .latestState==$state and .latestDatabase==$database and
+   .recoveryKeyEscrowed==true and
+   (.mountSource|length)>0 and (.mountType|length)>0 and
+   (.escrowSource|length)>0 and (.escrowType|length)>0 and
+   .mountSource != .escrowSource' "$offsite_status" >/dev/null ||
   fail "off-host backup does not match the latest encrypted backup"
 echo "BACKUP: PASS"
 

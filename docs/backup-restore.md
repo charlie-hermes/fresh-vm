@@ -2,7 +2,11 @@
 
 ## Schedule and retention
 
-`paperclip-backup.timer` runs daily with persistent catch-up. Paperclip also makes hourly embedded-database backups. The integration backup retains database and state artifacts for 30 days.
+`paperclip-backup.timer` runs daily with persistent catch-up. Paperclip's
+built-in plaintext database backup is disabled. The integration backup stages
+database and state data in a protected runtime directory, encrypts and verifies
+both artifacts, removes the staging directory on every exit, and retains only
+encrypted artifacts for 30 days.
 
 Manual backup:
 
@@ -20,6 +24,8 @@ sudo find /var/lib/paperclip/backups -maxdepth 2 -type f -printf '%TY-%Tm-%Td %T
   skill state, and sandbox-home state.
 - Both workspaces and acceptance evidence.
 - Systemd units, Docker daemon config, operations scripts and integration/patch documentation.
+- Non-secret instance/company/employee identity mappings required to reconnect
+  the restored database and four profiles.
 
 Excluded from plaintext state archives:
 
@@ -30,16 +36,23 @@ Excluded from plaintext state archives:
 - Root-owned `/etc/paperclip` secrets.
 - Browser binaries/caches and pinned application runtimes; reinstall them from the documented pins.
 
-Provider/operator credentials require a separate encrypted backup or fresh login/rotation.
+Provider and operator credentials require a separate encrypted backup or fresh
+login/rotation. The backup-encryption passphrase is escrowed during every
+offsite sync to the independently mounted recovery store. A production
+commissioning pass fails if backup storage and key escrow resolve to the same
+remote source.
 
 Pre-fix state archives created before the instance `.env` and transient-log exclusions were added were deleted after a corrected archive validated. Generic token-signature scans may identify non-live placeholders in the bundled `native-mcp.md` skill reference; actual-value scans against live credentials must remain zero.
 
-## Validate an archive
+## Decrypt and validate an archive
 
 ```sh
-cd /var/lib/paperclip/backups/state
-sha256sum -c state-YYYYMMDD-HHMMSS.tar.gz.sha256
-tar -tzf state-YYYYMMDD-HHMMSS.tar.gz | less
+restore_dir=$(mktemp -d /tmp/paperclip-restore.XXXXXX)
+sudo gpg --batch --yes --pinentry-mode loopback \
+  --passphrase-file /etc/paperclip/backup-encryption.passphrase \
+  --output "$restore_dir/state.tar.gz" \
+  --decrypt /var/lib/paperclip/backups/encrypted/state-YYYYMMDD-HHMMSS-PID.tar.gz.gpg
+sudo tar -tzf "$restore_dir/state.tar.gz" | less
 ```
 
 Assert that `auth.json`, all `.env` files, instance/profile logs, `/etc/paperclip`, and live `instances/default/db` are absent.
@@ -49,8 +62,7 @@ Assert that `auth.json`, all `.env` files, instance/profile logs, `/etc/papercli
 Never restore over production during a test:
 
 ```sh
-restore_dir=$(mktemp -d /tmp/paperclip-restore.XXXXXX)
-tar -xzf /var/lib/paperclip/backups/state/state-YYYYMMDD-HHMMSS.tar.gz -C "$restore_dir"
+sudo tar -xzf "$restore_dir/state.tar.gz" -C "$restore_dir"
 find "$restore_dir" -maxdepth 5 -type f | sort
 ```
 
@@ -67,4 +79,5 @@ Compare representative workspace, config, memory, session/checkpoint, unit, and 
 7. Run `systemctl daemon-reload`; start Docker/containerd and Paperclip.
 8. Verify health, listeners, private route, agents, workspaces, session/memory/checkpoint state, container labels/mounts, and one real heartbeat.
 
-Database and state restores into temporary locations were both performed successfully during acceptance; details and artifact names are in `acceptance-report.md`.
+Record restore-test evidence outside the appliance repository and never claim a
+restore test that was not performed on the client instance.

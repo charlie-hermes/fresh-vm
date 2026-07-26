@@ -16,8 +16,20 @@ factory=/opt/paperclip/integration/factory
 profile_root=/var/lib/paperclip/agents/$slug
 home=$profile_root/home
 workspace=/srv/paperclip/workspaces/$slug
+ready=$profile_root/.PROFILE_READY
 
-test ! -e "$profile_root" || { echo "profile already exists: $profile_root" >&2; exit 73; }
+# Profile creation is deliberately convergent: an interrupted run may leave any
+# subset of these paths behind. The marker is written only after every required
+# file has been installed.
+if test -f "$ready"; then
+  test -f "$home/config.yaml" &&
+    test -f "$home/skills/$role/SKILL.md" &&
+    test -f "$home/skills/paperclip-employee/SKILL.md" &&
+    test -d "$workspace" ||
+      { echo "completed profile is inconsistent: $profile_root" >&2; exit 1; }
+  echo "profile already complete: $slug"
+  exit 0
+fi
 install -d -o paperclip -g paperclip -m 0700 \
   "$home" "$home/skills" "$home/skills/paperclip-employee/scripts" \
   "$home/skills/$role" "$home/logs" "$home/sessions" "$home/memories" \
@@ -46,6 +58,11 @@ for helper in paperclip-checkout paperclip-issue-update paperclip-upload-artifac
     "$home/skills/paperclip-employee/scripts/$helper"
 done
 install -o paperclip -g paperclip -m 0600 /dev/null "$home/.no-bundled-skills"
-install -o paperclip -g paperclip -m 0600 /dev/null "$home/CREDENTIAL_REQUIRED"
+if test ! -f "$home/auth.json"; then
+  install -o paperclip -g paperclip -m 0600 /dev/null "$home/CREDENTIAL_REQUIRED"
+fi
+printf '%s\n' "$role" >"$ready"
+chown root:root "$ready"
+chmod 0600 "$ready"
 
 echo "created profile=$slug role=$role home=$home workspace=$workspace"

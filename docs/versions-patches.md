@@ -2,7 +2,7 @@
 
 ## Host and components
 
-- Ubuntu 24.04 LTS (`noble`), amd64; minimum 4 vCPU, 6 GiB RAM, 30 GiB
+- Ubuntu 24.04 LTS (`noble`), amd64; minimum 4 vCPU, 12 GiB RAM, 30 GiB
   free root-disk space, and 1 GiB active swap.
 - Paperclip 2026.720.0: `/opt/paperclip/2026.720.0`.
 - Hermes Agent v0.19.0 (2026.7.20), commit `7de554277de632364c74fcf8641daa58a9a977d9`: `/opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9`.
@@ -32,7 +32,12 @@ Expected upstream and final SHA-256 values are in
 adjacent `overlays/` tree. Installation stops if upstream or final content
 differs.
 
-Notable regression results: adapter compatibility suite passed; file-tool focused suite passed; checkpoint suite passed; Docker interrupt suite passed; delegation suite 29 passed; web suite 143 passed; Docker profile/reuse suites 84 passed plus 3 standalone identity tests.
+The installed `paperclip-integration-regression` command reruns 164 retained
+Hermes tests covering file/checkpoint propagation, Docker interruption and
+profile reuse, synchronous delegation, shared child-container identity, the
+web-search alias, and session behavior. It also executes direct Paperclip
+adapter-URL and session-fingerprint assertions. These are not a substitute for
+the clean-VM release gates.
 
 ## Files created or modified
 

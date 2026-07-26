@@ -23,6 +23,15 @@ sudo systemctl start paperclip.service
 
 Docker/containerd are vendor units and must remain enabled. Paperclip requires Docker and fails its `ExecStartPre` socket check when Docker is unavailable; it does not fall back to host terminal execution.
 
+## Interrupted bootstrap
+
+Rerun `sudo ./bootstrap.sh`. Profile creation and finalization use completion
+markers and repair partial files. A completed appliance also removes stale
+pending/bootstrap material before verifying. If a legacy interrupted build has
+`precomplete` but lost `bootstrap/admin.env`, the installer stops instead of
+inventing credentials for a possibly existing administrator; preserve the VM
+and recover or rebuild from a clean VM.
+
 Before a planned VM reboot, confirm the company heartbeat-run list has no `queued` or `running` entries. Paperclip 2026.720.0 can log a graceful-run-drain query warning during shutdown when embedded PostgreSQL closes first; if the pre-shutdown run count was zero, systemd deactivated cleanly, post-boot health is green, and a smoke heartbeat succeeds, this is the documented upstream ordering limitation rather than state loss.
 
 ## Health and disk
@@ -45,13 +54,19 @@ sudo tail -n 20 /var/lib/paperclip/soak/samples.jsonl | jq .
 
 Off-host backup is mandatory for production readiness. Configure
 `/etc/paperclip/offsite-backup.conf`, set
-`PAPERCLIP_OFFSITE_REQUIRED=true`, start
+`PAPERCLIP_OFFSITE_REQUIRED=true`, name different supported remote mounts in
+`PAPERCLIP_OFFSITE_MOUNT` and `PAPERCLIP_RECOVERY_ESCROW_MOUNT`, start
 `paperclip-offsite-sync.service`, and confirm
 `/var/lib/paperclip/backups/offsite-status/last-success.json` reports
-`verified: true`. A local directory on the root disk does not satisfy this
-requirement.
+`verified: true` and `recoveryKeyEscrowed: true`. Root, local, bind, temporary,
+or same-source mounts do not satisfy this requirement.
 
-## Adding an agent
+## Changing the four-agent factory
+
+The released appliance intentionally verifies exactly four profiles. Adding or
+removing an employee is a factory change, not an ad-hoc production operation:
+update the initializer, credential installer, backup exclusions, functional
+acceptance, and exact-count verification together in a reviewed release.
 
 1. Allocate a unique `/var/lib/paperclip/agents/<agent>/home` and `/srv/paperclip/workspaces/<agent>` owned by `paperclip:paperclip`, mode 0750.
 2. Initialize a separate Hermes configuration/credential set; do not share sessions, memory, state DB, sandbox home, or credentials.

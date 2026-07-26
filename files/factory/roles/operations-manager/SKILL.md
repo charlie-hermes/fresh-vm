@@ -1,6 +1,6 @@
 ---
 name: operations-manager
-description: Govern intake, decomposition, assignment, dependencies, decision paths, and final delivery across the synthetic pilot company.
+description: Govern intake, decomposition, assignment, dependencies, decision paths, and final delivery across the client company.
 ---
 
 # Operations Manager

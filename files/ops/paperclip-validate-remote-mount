@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+mount_path=${1:-}
+test -n "$mount_path" && test "${mount_path#/}" != "$mount_path" ||
+  { echo "usage: paperclip-validate-remote-mount ABSOLUTE_MOUNT" >&2; exit 64; }
+test "$mount_path" != / || { echo "root filesystem is not off-host storage" >&2; exit 69; }
+/usr/bin/mountpoint -q "$mount_path" ||
+  { echo "not a mountpoint: $mount_path" >&2; exit 69; }
+
+target=$(/usr/bin/findmnt -n -o TARGET --target "$mount_path")
+source=$(/usr/bin/findmnt -n -o SOURCE --target "$mount_path")
+fstype=$(/usr/bin/findmnt -n -o FSTYPE --target "$mount_path")
+test "$target" = "$mount_path" ||
+  { echo "path does not resolve to its own mount: $mount_path" >&2; exit 69; }
+case "$fstype" in
+  nfs|nfs4|cifs|smb3|ceph|glusterfs|fuse.sshfs|fuse.rclone|fuse.s3fs|fuse.gcsfuse|fuse.blobfuse2|fuse.goofys) ;;
+  *) echo "unsupported non-remote filesystem type $fstype at $mount_path" >&2; exit 69 ;;
+esac
+printf '%s\t%s\t%s\n' "$target" "$source" "$fstype"

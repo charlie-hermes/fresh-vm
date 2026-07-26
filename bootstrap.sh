@@ -19,10 +19,9 @@ step() { printf '\n==> %s\n' "$*"; }
 hash_is() { test "$(sha256sum "$1" | awk '{print $1}')" = "$2"; }
 
 step "Validate repository and target VM"
-if [ -f "$repo/MANIFEST.sha256" ]; then
-  (cd "$repo" && sha256sum --check --strict MANIFEST.sha256) ||
-    die "repository checksum validation failed"
-fi
+test -f "$repo/MANIFEST.sha256" || die "MANIFEST.sha256 is required"
+(cd "$repo" && sha256sum --check --strict MANIFEST.sha256) ||
+  die "repository checksum validation failed"
 # shellcheck disable=SC1091
 . /etc/os-release
 test "${ID:-}" = "$SUPPORTED_UBUNTU_ID" || die "Ubuntu is required"
@@ -36,16 +35,22 @@ test "$(nproc)" -ge "$MIN_CPU_COUNT" ||
   die "at least $MIN_CPU_COUNT vCPUs are required"
 memory_kib=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
 test "$memory_kib" -ge "$MIN_MEMORY_KIB" ||
-  die "at least 6 GiB RAM is required"
+  die "at least 12 GiB RAM is required"
 root_free_kib=$(df -Pk / | awk 'NR==2 {print $4}')
 test "$root_free_kib" -ge "$MIN_ROOT_FREE_KIB" ||
   die "at least 30 GiB free on / is required"
 
 if [ -f /var/lib/paperclip-appliance/complete ]; then
+  rm -f -- /var/lib/paperclip-appliance/pending
+  rm -rf -- /var/lib/paperclip-appliance/bootstrap
   step "Existing initialized appliance detected"
   "$repo/verify.sh" --platform-only
   echo "Bootstrap is already complete; no state was recreated."
   exit 0
+fi
+if [ -f /var/lib/paperclip-appliance/precomplete ] &&
+   [ ! -f /var/lib/paperclip-appliance/bootstrap/admin.env ]; then
+  die "interrupted legacy initialization has no recovery credential; preserve state and follow the recovery runbook"
 fi
 
 step "Install pinned host prerequisites"
@@ -220,7 +225,8 @@ systemctl start paperclip-network-policy.service
 
 step "Initialize a unique private Paperclip appliance"
 install -d -o root -g root -m 0700 /var/lib/paperclip-appliance
-if [ ! -f /var/lib/paperclip-appliance/precomplete ]; then
+if [ ! -f /var/lib/paperclip-appliance/precomplete ] ||
+   [ ! -f /var/lib/paperclip-appliance/complete ]; then
   touch /var/lib/paperclip-appliance/pending
   chmod 0600 /var/lib/paperclip-appliance/pending
 fi

@@ -1,0 +1,4 @@
+# Overlay files are byte-for-byte validated runtime artifacts. Preserve their
+# upstream/final whitespace because changing it invalidates locked hashes.
+overlays/** whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+files/bin/jq binary

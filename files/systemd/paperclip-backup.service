@@ -1,0 +1,26 @@
+[Unit]
+Description=Create compressed Paperclip database and non-secret state backups
+After=paperclip.service
+Requires=paperclip.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=HOME=/var/lib/paperclip
+ExecStart=/opt/paperclip/ops/paperclip-backup.sh
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/paperclip/backups /var/lib/paperclip/instances/default/data/backups
+ReadOnlyPaths=/etc/paperclip /var/lib/paperclip /srv/paperclip/workspaces /opt/paperclip /etc/systemd/system /etc/docker
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH

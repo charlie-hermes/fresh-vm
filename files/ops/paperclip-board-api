@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+test "$(id -u)" -eq 0 || { echo "paperclip-board-api must run as root" >&2; exit 77; }
+set -a
+. /etc/paperclip/operator.env
+set +a
+export PAPERCLIP_API_URL=${PAPERCLIP_API_URL:-http://172.30.0.1:3100}
+export PAPERCLIP_API_KEY=${PAPERCLIP_BOARD_API_KEY:?PAPERCLIP_BOARD_API_KEY is required}
+unset PAPERCLIP_BOARD_API_KEY
+unset PAPERCLIP_AGENT_ID PAPERCLIP_RUN_ID
+exec /opt/paperclip/ops/paperclip-api "$@"

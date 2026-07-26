@@ -1,0 +1,58 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+state=/var/lib/paperclip-appliance
+pending=$state/pending
+bootstrap=$state/bootstrap
+template=/opt/paperclip/integration/paperclip
+instance=/var/lib/paperclip/instances/default
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+test -e "$pending" || exit 0
+test ! -e "$state/precomplete" || exit 0
+exec 9>"$state/firstboot.lock"
+flock -n 9 || exit 0
+
+install -d -o root -g root -m 0700 "$state" "$bootstrap"
+install -d -o paperclip -g paperclip -m 0750 /var/lib/paperclip /var/lib/paperclip/instances
+install -d -o paperclip -g paperclip -m 0700 \
+  "$instance" "$instance/secrets" "$instance/data" "$instance/logs"
+install -d -o paperclip -g paperclip -m 0750 /srv/paperclip/workspaces
+install -d -o root -g root -m 0700 /etc/paperclip
+
+instance_id=$(cat /proc/sys/kernel/random/uuid)
+jwt_secret=$(openssl rand -hex 48)
+backup_secret=$(openssl rand -base64 48 | tr -d '\n')
+admin_password="Pc-$(openssl rand -hex 24)"
+
+printf '%s\n' "$instance_id" > /etc/paperclip/instance-id
+printf '%s\n' "$backup_secret" > /etc/paperclip/backup-encryption.passphrase
+cat > /etc/paperclip/paperclip.env <<EOF
+PAPERCLIP_AGENT_JWT_SECRET=$jwt_secret
+PAPERCLIP_AGENT_JWT_DISABLE_LEGACY_FALLBACK=true
+PAPERCLIP_HEARTBEAT_GLOBAL_MAX_CONCURRENT_RUNS=2
+PAPERCLIP_SECRETS_STRICT_MODE=true
+EOF
+install -o root -g paperclip -m 0640 /etc/paperclip/paperclip.env "$instance/.env"
+chown paperclip:paperclip "$instance/.env"
+chmod 0600 "$instance/.env"
+install -o root -g paperclip -m 0640 "$template/offsite-backup.conf" /etc/paperclip/offsite-backup.conf
+
+jq '.["$meta"].updatedAt=(now|todateiso8601)' "$template/config.json" > "$bootstrap/config.json"
+install -o paperclip -g paperclip -m 0600 "$bootstrap/config.json" "$instance/config.json"
+openssl rand -base64 32 > "$bootstrap/master.key"
+install -o paperclip -g paperclip -m 0600 "$bootstrap/master.key" "$instance/secrets/master.key"
+
+cat > "$bootstrap/admin.env" <<EOF
+PAPERCLIP_OPERATOR_EMAIL=admin@paperclip.internal
+PAPERCLIP_OPERATOR_PASSWORD=$admin_password
+PAPERCLIP_INSTANCE_ID=$instance_id
+EOF
+chmod 0600 "$bootstrap/admin.env"
+
+hostnamectl set-hostname "paperclip-${instance_id%%-*}"
+touch "$state/precomplete"
+chmod 0600 "$state/precomplete"
+echo "Paperclip clone pre-initialization complete: instance=$instance_id"

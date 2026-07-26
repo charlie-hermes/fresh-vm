@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+issue_id=
+status=
+while test "$#" -gt 0; do
+  case "$1" in
+    --issue-id) issue_id=${2:-}; shift 2 ;;
+    --status) status=${2:-}; shift 2 ;;
+    -h|--help) echo "usage: paperclip-issue-update --issue-id ID --status STATUS < comment.md"; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 64 ;;
+  esac
+done
+
+test -n "$issue_id" || issue_id=${PAPERCLIP_TASK_ID:-}
+test -n "$issue_id" || { echo "issue id is required" >&2; exit 64; }
+case "$issue_id" in *[!A-Za-z0-9-]*) echo "invalid issue id" >&2; exit 64;; esac
+case "$status" in backlog|todo|in_progress|in_review|done|blocked|cancelled) ;; *) echo "invalid status" >&2; exit 64;; esac
+
+comment_file=$(mktemp)
+trap 'rm -f "$comment_file"' EXIT HUP INT TERM
+cat >"$comment_file"
+jq -nc --arg status "$status" --rawfile comment "$comment_file" \
+  '{status:$status,comment:$comment}' |
+  paperclip-api PATCH "/issues/$issue_id" -

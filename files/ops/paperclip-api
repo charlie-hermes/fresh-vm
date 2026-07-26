@@ -1,0 +1,73 @@
+#!/bin/sh
+set -eu
+
+usage() {
+  echo "usage: paperclip-api METHOD /api-relative-path [JSON_FILE|-]" >&2
+  exit 64
+}
+
+method=${1:-}
+request_path=${2:-}
+body_source=${3:-}
+
+case "$method" in
+  GET|POST|PATCH|PUT|DELETE) ;;
+  *) usage ;;
+esac
+
+case "$request_path" in
+  /*) ;;
+  *) usage ;;
+esac
+
+case "$request_path" in
+  *://*|*..*|*"
+"*) echo "unsafe Paperclip API path" >&2; exit 64 ;;
+esac
+
+test -n "${PAPERCLIP_API_URL:-}" || { echo "PAPERCLIP_API_URL is required" >&2; exit 69; }
+test -n "${PAPERCLIP_API_KEY:-}" || { echo "PAPERCLIP_API_KEY is required" >&2; exit 69; }
+
+api_base=${PAPERCLIP_API_URL%/}
+case "$api_base" in
+  */api) ;;
+  *) api_base=$api_base/api ;;
+esac
+
+case "$method" in
+  POST|PATCH|PUT|DELETE)
+    if test -n "${PAPERCLIP_AGENT_ID:-}" && test -z "${PAPERCLIP_RUN_ID:-}"; then
+      echo "PAPERCLIP_RUN_ID is required for agent mutations" >&2
+      exit 69
+    fi
+    ;;
+esac
+
+curl_args="--config /dev/fd/3 --silent --show-error --fail --connect-timeout 10 --max-time ${PAPERCLIP_API_TIMEOUT_SECONDS:-120} --request $method"
+
+if test -n "$body_source"; then
+  case "$body_source" in
+    -) set -- --data-binary @- ;;
+    *) test -f "$body_source" || { echo "JSON body file not found: $body_source" >&2; exit 66; }; set -- --data-binary "@$body_source" ;;
+  esac
+else
+  set --
+fi
+
+if test -n "${PAPERCLIP_RUN_ID:-}"; then
+  run_header="header = \"X-Paperclip-Run-Id: ${PAPERCLIP_RUN_ID}\""
+else
+  run_header=
+fi
+
+# The bearer credential is supplied over an inherited file descriptor, not in
+# argv, a URL, a tracked file, or curl's environment.
+exec 3<<EOF
+url = "${api_base}${request_path}"
+header = "Authorization: Bearer ${PAPERCLIP_API_KEY}"
+header = "Content-Type: application/json"
+${run_header}
+EOF
+
+# shellcheck disable=SC2086
+env -u PAPERCLIP_API_KEY /usr/bin/curl $curl_args "$@"

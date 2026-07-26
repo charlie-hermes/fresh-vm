@@ -1,0 +1,222 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+state=/var/lib/paperclip-appliance
+pending=$state/pending
+bootstrap=$state/bootstrap
+base=http://172.30.0.1:3100
+api=$base/api
+template=/opt/paperclip/integration/paperclip
+factory=/usr/local/sbin/paperclip-hermes-profile-init
+credential_installer=/usr/local/sbin/paperclip-hermes-credential-install
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+test -e "$pending" || exit 0
+test -e "$state/precomplete" || { echo "firstboot pre-stage incomplete" >&2; exit 1; }
+exec 9>"$state/finalize.lock"
+flock -n 9 || exit 0
+set -a
+. "$bootstrap/admin.env"
+set +a
+
+cookie=$(mktemp)
+body=$(mktemp)
+trap 'rm -f "$cookie" "$body"' EXIT HUP INT TERM
+
+for _ in $(seq 1 120); do
+  if curl --fail --silent --max-time 2 "$api/health" |
+      jq -e '.status == "ok"' >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+curl --fail --silent --show-error --max-time 5 "$api/health" >/dev/null
+
+login() {
+  curl --silent --show-error --max-time 10 -c "$cookie" \
+    -H 'Content-Type: application/json' -H "Origin: $base" \
+    --data "$(jq -n --arg e "$PAPERCLIP_OPERATOR_EMAIL" --arg p "$PAPERCLIP_OPERATOR_PASSWORD" \
+      '{email:$e,password:$p}')" "$api/auth/sign-in/email" >"$body"
+}
+if ! login || ! jq -e '.user.id | type == "string"' "$body" >/dev/null 2>&1; then
+  curl --fail --silent --show-error --max-time 10 -c "$cookie" \
+    -H 'Content-Type: application/json' -H "Origin: $base" \
+    --data "$(jq -n --arg e "$PAPERCLIP_OPERATOR_EMAIL" --arg p "$PAPERCLIP_OPERATOR_PASSWORD" \
+      '{name:"Paperclip Administrator",email:$e,password:$p}')" \
+    "$api/auth/sign-up/email" >"$body"
+  jq -e '.user.id | type == "string"' "$body" >/dev/null
+fi
+
+claim_code=$(curl --silent --show-error --max-time 10 -o "$body" -w '%{http_code}' \
+  -b "$cookie" -H 'Content-Type: application/json' -H "Origin: $base" \
+  --data '{}' "$api/bootstrap/claim")
+case "$claim_code" in 200|409) ;; *) cat "$body" >&2; exit 1;; esac
+
+if [ ! -f /etc/paperclip/operator.env ]; then
+  curl --fail --silent --show-error --max-time 10 -b "$cookie" \
+    -H 'Content-Type: application/json' -H "Origin: $base" \
+    --data '{"name":"appliance-operator","expiresAt":null}' \
+    "$api/board-api-keys" >"$body"
+  board_id=$(jq -er '.id' "$body")
+  board_token=$(jq -er '.token' "$body")
+  cat > /etc/paperclip/operator.env <<EOF
+PAPERCLIP_OPERATOR_EMAIL=$PAPERCLIP_OPERATOR_EMAIL
+PAPERCLIP_OPERATOR_PASSWORD=$PAPERCLIP_OPERATOR_PASSWORD
+PAPERCLIP_BOARD_API_KEY=$board_token
+PAPERCLIP_BOARD_API_KEY_ID=$board_id
+EOF
+  chmod 0600 /etc/paperclip/operator.env
+fi
+set -a
+. /etc/paperclip/operator.env
+set +a
+
+api_call() {
+  method=$1
+  path=$2
+  data=${3:-}
+  args=(--fail --silent --show-error --max-time 20 -X "$method"
+    -H "Authorization: Bearer $PAPERCLIP_BOARD_API_KEY")
+  if [ -n "$data" ]; then
+    args+=(-H 'Content-Type: application/json' --data "$data")
+  fi
+  curl "${args[@]}" "$api$path"
+}
+
+if [ ! -f /etc/paperclip/company-id ]; then
+  company_id=$(api_call GET /companies |
+    jq -r '.[] | select(.name=="Paperclip Operations") | .id' | head -n 1)
+  if [ -z "$company_id" ]; then
+    api_call POST /companies \
+      '{"name":"Paperclip Operations","description":"Clean Hermes/Paperclip appliance workspace"}' >"$body"
+    company_id=$(jq -er '.id' "$body")
+  fi
+  printf '%s\n' "$company_id" > /etc/paperclip/company-id
+  chmod 0600 /etc/paperclip/company-id
+else
+  company_id=$(cat /etc/paperclip/company-id)
+fi
+
+create_agent() {
+  slug=$1
+  role_pack=$2
+  name=$3
+  role=$4
+  title=$5
+  reports_to=$6
+  instructions=$7
+  if [ ! -d "/var/lib/paperclip/agents/$slug" ]; then
+    "$factory" "$slug" "$role_pack" >/dev/null
+  fi
+  agent_id=$(api_call GET "/companies/$company_id/agents" |
+    jq -r --arg name "$name" '.[] | select(.name==$name) | .id' | head -n 1)
+  if [ -z "$agent_id" ]; then
+  payload=$(jq -n \
+    --arg name "$name" --arg role "$role" --arg title "$title" \
+    --arg cwd "/srv/paperclip/workspaces/$slug" \
+    --arg home "/var/lib/paperclip/agents/$slug/home" \
+    --arg reports "$reports_to" \
+    '{
+      name:$name, role:$role, title:$title, adapterType:"hermes_local",
+      adapterConfig:{
+        cwd:$cwd, env:{HERMES_HOME:{type:"plain",value:$home}},
+        hermesCommand:"/opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9/venv/bin/hermes",
+        provider:"openai-codex", model:"gpt-5.6-sol",
+        maxTurnsPerRun:40, timeoutSec:900, graceSec:20,
+        persistSession:true, checkpoints:true, quiet:true, verbose:false,
+        worktreeMode:false, extraArgs:["--pass-session-id"],
+        paperclipApiUrl:"http://paperclip-host:3100",
+        instructionsBundleMode:"managed", instructionsEntryFile:"AGENTS.md"
+      },
+      runtimeConfig:{heartbeat:{enabled:false,maxConcurrentRuns:1}},
+      permissions:{canCreateAgents:($role=="pm"),canCreateSkills:true,trustPreset:"standard"}
+    } + (if $reports=="" then {} else {reportsTo:$reports} end)')
+    api_call POST "/companies/$company_id/agents" "$payload" >"$body"
+    agent_id=$(jq -er '.id' "$body")
+  fi
+  api_call PUT "/agents/$agent_id/instructions-bundle/file" \
+    "$(jq -n --rawfile c "$instructions" \
+      '{path:"AGENTS.md",content:$c,clearLegacyPromptTemplate:true}')" >/dev/null
+  printf '%s\n' "$agent_id"
+}
+
+if [ ! -f /etc/paperclip/hermes-agent-ids.json ]; then
+  operations_id=$(create_agent operations operations-manager \
+    "Operations Manager" pm "Operations Manager" "" "$template/AGENTS-operations.md")
+  research_id=$(create_agent research research-strategy \
+    "Research and Strategy Specialist" researcher "Research and Strategy Specialist" \
+    "$operations_id" "$template/AGENTS-research.md")
+  production_id=$(create_agent production production-specialist \
+    "Production Specialist" designer "Production Specialist" \
+    "$operations_id" "$template/AGENTS-production.md")
+  qa_id=$(create_agent qa qa-reviewer \
+    "QA Reviewer" qa "Independent QA Reviewer" \
+    "$operations_id" "$template/AGENTS-qa.md")
+  jq -n --arg o "$operations_id" --arg r "$research_id" \
+    --arg p "$production_id" --arg q "$qa_id" \
+    '{operations:$o,research:$r,production:$p,qa:$q}' \
+    > "$bootstrap/hermes-agent-ids.json"
+  install -o root -g root -m 0600 \
+    "$bootstrap/hermes-agent-ids.json" /etc/paperclip/hermes-agent-ids.json
+  printf '%s\n' "$operations_id" > /etc/paperclip/hermes-agent-id
+  chmod 0600 /etc/paperclip/hermes-agent-id
+fi
+
+if [ -f /etc/paperclip-seed/hermes-auth.json ]; then
+  env_arg=
+  [ ! -f /etc/paperclip-seed/hermes.env ] || env_arg=/etc/paperclip-seed/hermes.env
+  "$credential_installer" /etc/paperclip-seed/hermes-auth.json "$env_arg"
+  rm -f -- /etc/paperclip-seed/hermes-auth.json /etc/paperclip-seed/hermes.env
+elif [ -f "$state/hermes-credential-installed" ]; then
+  jq -r '.[]' /etc/paperclip/hermes-agent-ids.json | while IFS= read -r agent_id; do
+    api_call POST "/agents/$agent_id/resume" >/dev/null
+  done
+else
+  jq -r '.[]' /etc/paperclip/hermes-agent-ids.json | while IFS= read -r agent_id; do
+    api_call POST "/agents/$agent_id/pause" >/dev/null
+  done
+fi
+
+jq '.auth.disableSignUp=true | .["$meta"].updatedAt=(now|todateiso8601)' \
+  /var/lib/paperclip/instances/default/config.json > "$bootstrap/config.final.json"
+install -o paperclip -g paperclip -m 0600 \
+  "$bootstrap/config.final.json" /var/lib/paperclip/instances/default/config.json
+systemctl restart paperclip.service
+for _ in $(seq 1 90); do
+  if curl --fail --silent --max-time 2 "$api/health" |
+      jq -e '.status=="ok" and .bootstrapStatus=="ready" and
+             .deploymentMode=="authenticated" and .deploymentExposure=="private"' \
+      >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+curl --fail --silent --show-error --max-time 5 "$api/health" |
+  jq -e '.status=="ok" and .bootstrapStatus=="ready"' >/dev/null
+
+install -d -o paperclip -g paperclip -m 0750 /var/lib/paperclip/acceptance-evidence
+/opt/paperclip/ops/paperclip-backup.sh >/dev/null
+systemctl enable --now paperclip-health.timer paperclip-backup.timer \
+  paperclip-soak-sample.timer paperclip-offsite-sync.timer >/dev/null
+
+cat > /root/paperclip-firstboot-credentials <<EOF
+Paperclip clone initialized: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Instance ID: $PAPERCLIP_INSTANCE_ID
+URL from this VM: http://172.30.0.1:3100
+Administrator email: $PAPERCLIP_OPERATOR_EMAIL
+Administrator password: $PAPERCLIP_OPERATOR_PASSWORD
+Board API token: $PAPERCLIP_BOARD_API_KEY
+Hermes credential: $([ -f "$state/hermes-credential-installed" ] && echo installed || echo REQUIRED)
+
+If Hermes credential is REQUIRED, run:
+  sudo paperclip-hermes-credential-install /secure/path/auth.json [/secure/path/hermes.env]
+EOF
+chmod 0600 /root/paperclip-firstboot-credentials
+
+rm -rf -- "$bootstrap"
+rm -f -- "$pending"
+date -u +%Y-%m-%dT%H:%M:%SZ > "$state/complete"
+chmod 0600 "$state/complete"
+echo "Paperclip clone initialization complete"

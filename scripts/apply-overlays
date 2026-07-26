@@ -1,0 +1,40 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+repo=${1:?usage: apply-overlays REPO_ROOT COMPONENT TARGET_ROOT}
+component=${2:?usage: apply-overlays REPO_ROOT COMPONENT TARGET_ROOT}
+target=${3:?usage: apply-overlays REPO_ROOT COMPONENT TARGET_ROOT}
+manifest=$repo/locks/overlays.tsv
+
+case "$component" in hermes|paperclip) ;; *) echo "invalid component: $component" >&2; exit 64;; esac
+test -f "$manifest"
+test -d "$target"
+
+while IFS=$'\t' read -r item upstream final relative; do
+  case "$item" in ""|\#*) continue ;; esac
+  test "$item" = "$component" || continue
+  source_file=$repo/overlays/$component/$relative
+  target_file=$target/$relative
+  test -f "$source_file" || { echo "missing overlay: $source_file" >&2; exit 1; }
+  test "$(sha256sum "$source_file" | awk '{print $1}')" = "$final" ||
+    { echo "overlay checksum mismatch: $source_file" >&2; exit 1; }
+  if [ -f "$target_file" ] &&
+     [ "$(sha256sum "$target_file" | awk '{print $1}')" = "$final" ]; then
+    continue
+  fi
+  if [ "$upstream" = MISSING ]; then
+    test ! -e "$target_file" ||
+      { echo "expected upstream path to be absent: $target_file" >&2; exit 1; }
+  else
+    test -f "$target_file" ||
+      { echo "missing upstream target: $target_file" >&2; exit 1; }
+    actual=$(sha256sum "$target_file" | awk '{print $1}')
+    test "$actual" = "$upstream" ||
+      { echo "upstream checksum mismatch: $relative ($actual)" >&2; exit 1; }
+  fi
+  install -D -m 0644 "$source_file" "$target_file"
+  test "$(sha256sum "$target_file" | awk '{print $1}')" = "$final"
+done <"$manifest"
+
+echo "$component overlays applied and verified"

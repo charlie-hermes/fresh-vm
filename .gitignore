@@ -1,0 +1,8 @@
+*.log
+*.tmp
+.env
+auth.json
+hermes.env
+offsite-backup.conf
+evidence/
+MANIFEST.sha256.tmp

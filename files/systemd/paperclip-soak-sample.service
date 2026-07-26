@@ -1,0 +1,10 @@
+[Unit]
+Description=Record a Paperclip appliance soak-health sample
+After=paperclip.service docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/paperclip/ops/paperclip-soak-sample.sh
+User=root
+Group=paperclip
+UMask=0027

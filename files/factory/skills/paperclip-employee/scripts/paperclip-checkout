@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+issue_id=${1:-${PAPERCLIP_TASK_ID:-}}
+test -n "$issue_id" || { echo "usage: paperclip-checkout ISSUE_ID" >&2; exit 64; }
+test -n "${PAPERCLIP_AGENT_ID:-}" || { echo "PAPERCLIP_AGENT_ID is required" >&2; exit 69; }
+case "$issue_id:$PAPERCLIP_AGENT_ID" in *[!A-Za-z0-9:-]*) echo "invalid Paperclip id" >&2; exit 64;; esac
+
+jq -nc --arg agentId "$PAPERCLIP_AGENT_ID" \
+  '{agentId:$agentId,expectedStatuses:["todo","backlog","blocked","in_review"]}' |
+  paperclip-api POST "/issues/$issue_id/checkout" -

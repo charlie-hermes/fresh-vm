@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+test "$(id -u)" -eq 0 || { echo "paperclip-network-policy must run as root" >&2; exit 77; }
+iptables=/usr/sbin/iptables
+subnet=172.30.0.0/24
+egress_chain=PAPERCLIP-EGRESS
+host_chain=PAPERCLIP-HOST
+
+$iptables -w -N "$egress_chain" 2>/dev/null || true
+$iptables -w -F "$egress_chain"
+$iptables -w -A "$egress_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+$iptables -w -A "$egress_chain" -d 10.0.0.0/8 -j REJECT --reject-with icmp-net-unreachable
+$iptables -w -A "$egress_chain" -d 100.64.0.0/10 -j REJECT --reject-with icmp-net-unreachable
+$iptables -w -A "$egress_chain" -d 127.0.0.0/8 -j REJECT --reject-with icmp-net-unreachable
+$iptables -w -A "$egress_chain" -d 169.254.0.0/16 -j REJECT --reject-with icmp-net-unreachable
+$iptables -w -A "$egress_chain" -d 172.16.0.0/12 -j REJECT --reject-with icmp-net-unreachable
+$iptables -w -A "$egress_chain" -d 192.168.0.0/16 -j REJECT --reject-with icmp-net-unreachable
+$iptables -w -A "$egress_chain" -j RETURN
+
+$iptables -w -C DOCKER-USER -s "$subnet" -j "$egress_chain" 2>/dev/null || \
+  $iptables -w -I DOCKER-USER 1 -s "$subnet" -j "$egress_chain"
+
+$iptables -w -N "$host_chain" 2>/dev/null || true
+$iptables -w -F "$host_chain"
+$iptables -w -A "$host_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$iptables -w -A "$host_chain" -p tcp --dport 3100 -j ACCEPT
+$iptables -w -A "$host_chain" -j REJECT --reject-with icmp-port-unreachable
+
+$iptables -w -C INPUT -s "$subnet" -j "$host_chain" 2>/dev/null || \
+  $iptables -w -I INPUT 1 -s "$subnet" -j "$host_chain"
+
+echo "Paperclip Hermes network policy active for $subnet"

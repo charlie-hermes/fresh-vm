@@ -1,0 +1,10 @@
+[Unit]
+Description=Copy and verify encrypted Paperclip backups on the configured off-host mount
+After=paperclip-backup.service local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/paperclip/ops/paperclip-offsite-sync.sh
+User=root
+Group=paperclip
+UMask=0027

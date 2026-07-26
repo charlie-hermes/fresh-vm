@@ -1,0 +1,124 @@
+# Operations runbook
+
+## Normal checks
+
+```sh
+sudo systemctl status paperclip docker containerd --no-pager
+sudo systemctl status paperclip-health.timer paperclip-backup.timer --no-pager
+curl -fsS http://172.30.0.1:3100/api/health | jq .
+sudo ss -lntp | grep -E '(:3100|:54329)'
+sudo docker ps --filter label=hermes-agent=1
+sudo journalctl -u paperclip.service -n 200 --no-pager
+```
+
+Expected listeners are `172.30.0.1:3100` and `127.0.0.1:54329`. Public `0.0.0.0:3100` or `[::]:3100` is a fault.
+
+## Start, stop, restart
+
+```sh
+sudo systemctl restart paperclip.service
+sudo systemctl stop paperclip.service
+sudo systemctl start paperclip.service
+```
+
+Docker/containerd are vendor units and must remain enabled. Paperclip requires Docker and fails its `ExecStartPre` socket check when Docker is unavailable; it does not fall back to host terminal execution.
+
+Before a planned VM reboot, confirm the company heartbeat-run list has no `queued` or `running` entries. Paperclip 2026.720.0 can log a graceful-run-drain query warning during shutdown when embedded PostgreSQL closes first; if the pre-shutdown run count was zero, systemd deactivated cleanly, post-boot health is green, and a smoke heartbeat succeeds, this is the documented upstream ordering limitation rather than state loss.
+
+## Health and disk
+
+```sh
+sudo systemctl start paperclip-health.service
+sudo journalctl -u paperclip-health.service -n 100 --no-pager
+sudo docker system df
+df -h /
+```
+
+The health timer runs every minute and fails above 85% filesystem use or on unhealthy service/API/Docker/network state.
+
+The soak timer records a redacted JSON health sample every fifteen minutes at `/var/lib/paperclip/soak/samples.jsonl`. Review it with:
+
+```sh
+sudo systemctl status paperclip-soak-sample.timer --no-pager
+sudo tail -n 20 /var/lib/paperclip/soak/samples.jsonl | jq .
+```
+
+Off-host backup is mandatory for production readiness. Configure
+`/etc/paperclip/offsite-backup.conf`, set
+`PAPERCLIP_OFFSITE_REQUIRED=true`, start
+`paperclip-offsite-sync.service`, and confirm
+`/var/lib/paperclip/backups/offsite-status/last-success.json` reports
+`verified: true`. A local directory on the root disk does not satisfy this
+requirement.
+
+## Adding an agent
+
+1. Allocate a unique `/var/lib/paperclip/agents/<agent>/home` and `/srv/paperclip/workspaces/<agent>` owned by `paperclip:paperclip`, mode 0750.
+2. Initialize a separate Hermes configuration/credential set; do not share sessions, memory, state DB, sandbox home, or credentials.
+3. Confirm the workspace remains below `/srv/paperclip/workspaces`.
+4. Confirm the dynamic backup includes the home/workspace and still excludes
+   its credential and log paths.
+5. Set adapter `env.HERMES_HOME` to that unique absolute home and `cwd` to the unique workspace.
+6. Reload/restart Paperclip, run adapter test, then run mutually exclusive workspace sentinels and inspect `hermes-profile` labels/mounts.
+7. Never reuse a `HERMES_HOME` across agents.
+
+## MCP
+
+The local acceptance echo server proved stdio MCP, then was unregistered. Production intentionally has no MCP server configured. Add only reviewed servers with:
+
+```sh
+sudo -u paperclip env HOME=/var/lib/paperclip HERMES_HOME=/var/lib/paperclip/agents/operations/home /opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9/venv/bin/hermes mcp add ...
+```
+
+Re-test boundaries and credentials after changes.
+
+## Incident guidance
+
+- Paperclip unhealthy: inspect `journalctl`, health JSON, embedded PG listener, disk, and Docker.
+- Docker down: restore Docker first; Paperclip is ordered/requires it. Do not change terminal backend to local.
+- Stuck run: inspect the heartbeat run, process group, and labeled container. Use Paperclip's run controls before manual signals.
+- Suspected cross-profile reuse: compare `hermes-profile` label and every bind source with the agent's `HERMES_HOME`; stop work if mismatched.
+- Disk pressure: preserve backups/state, then prune only resolved stale acceptance containers/images. Do not delete active profile homes or workspaces.
+- Credentials: rotate `/etc/paperclip/operator.env` through Paperclip mechanisms and profile auth through Hermes login; never edit reports to include values.
+
+## Emergency stop and recovery
+
+```sh
+sudo /opt/paperclip/ops/paperclip-emergency-control status
+sudo /opt/paperclip/ops/paperclip-emergency-control stop
+sudo /opt/paperclip/ops/paperclip-emergency-control resume
+```
+
+`stop` snapshots only agents that were not already paused, pauses them, cancels live/queued runs, and stops every `hermes-agent=1` container. `resume` restores only the snapshotted agents to idle; it must not unpause regression or built-in helper agents.
+
+After resume, inspect every issue that was `in_progress` or queued at the stop boundary. Paperclip may create a `stranded_assigned_issue` recovery action and set the source issue to `blocked`. Use `GET /api/issues/{id}/recovery-actions` through the root board client. Resolve with `outcome: restored, sourceIssueStatus: done` only when a durable artifact/comment proves completion; otherwise restore to `todo` to hand work back. Never mark an interrupted issue done merely because its adapter run succeeded.
+
+A `handed_back` recovery can produce a short validation heartbeat whose only job is to confirm the runtime path and leave the issue in `todo`; it is not proof that the original deliverable was completed. After that validation run ends, verify that no live run owns the issue, then add a normal board dispatch comment (or use the ordinary scheduler path) to wake the assignee for the original work. Distinguish the recovery-validation run from the subsequent business-work run in the incident record.
+
+If blocker diagnostics report `allBlockersDone: true` while an issue remains `blocked`, the board may clear the stale hold by moving it to `todo`. Record why. Avoid combining a human board comment with a new unresolved `blockedByIssueIds` relation: this release can queue an unnecessary assignee wake from the comment even though dependency checkout remains blocked.
+
+## Employee adapter configuration (redacted)
+
+```json
+{
+  "adapterType": "hermes_local",
+  "adapterConfig": {
+    "hermesCommand": "/opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9/venv/bin/hermes",
+    "cwd": "/srv/paperclip/workspaces/<slug>",
+    "provider": "openai-codex",
+    "model": "gpt-5.6-sol",
+    "quiet": true,
+    "verbose": false,
+    "persistSession": true,
+    "checkpoints": true,
+    "worktreeMode": false,
+    "timeoutSec": 900,
+    "graceSec": 20,
+    "maxTurnsPerRun": 40,
+    "paperclipApiUrl": "http://paperclip-host:3100",
+    "extraArgs": ["--pass-session-id"]
+  }
+}
+```
+
+No API keys are stored in this object. Omitted toolsets means all installed/available toolsets; both `toolsets` and `enabledToolsets` are not supplied.

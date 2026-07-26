@@ -32,10 +32,12 @@ Expected upstream and final SHA-256 values are in
 adjacent `overlays/` tree. Installation stops if upstream or final content
 differs.
 
-The installed `paperclip-integration-regression` command reruns the retained
-file-tool, checkpoint, Docker interrupt, and profile/reuse regression assets.
-Historical broader adapter, delegation, and web suites remain reference
-evidence, not a substitute for the clean-VM release gates.
+The installed `paperclip-integration-regression` command reruns 164 retained
+Hermes tests covering file/checkpoint propagation, Docker interruption and
+profile reuse, synchronous delegation, shared child-container identity, the
+web-search alias, and session behavior. It also executes direct Paperclip
+adapter-URL and session-fingerprint assertions. These are not a substitute for
+the clean-VM release gates.
 
 ## Files created or modified
 

@@ -14,7 +14,7 @@ c8b21648c0c7a153d8c24456d29397e66e042b455d068ef3c8274f39d3d5b7e5  ./docs/employe
 b7f937e90b1fa227b857789272b5a9243c86381a5d4748e4cecc03341c3184c3  ./docs/operations-runbook.md
 d38cf11afc3b659bf24fe639f952a2d1707b758a7352ddc8aa47ac3571384fe8  ./docs/rollback.md
 26872b960ea0fa875178c4b5f93c8c2b1a80a384b1abcbe7e671f046b8f1997a  ./docs/supervisory-operating-model.md
-6c7f037b0802aec405435afbedd568d7b48dba38b7ab3ce7f65f1d04ddcaf7ec  ./docs/versions-patches.md
+ff5e5baa0871d0b0a4e035d335f2848d3764ef978ac80e83e21ba60ff43ca0e7  ./docs/versions-patches.md
 020468de7539ce70ef1bceaf7cde2e8c4f2ca6c3afb84642aabc5c97d9fc2a0d  ./files/bin/jq
 21e070fd10f9d06e38752adf4b56bd506d835432f34908d7b43d720f4aa23276  ./files/docker/daemon.json
 053d434b95666ad1eb97fec05b8f0a197e0b53787a22e309c19e8e2c54dd5d1f  ./files/factory/config.yaml.template
@@ -32,11 +32,12 @@ e4af246514861ed58c7ef7658003061fe264d406ca1110764b4cf9d967bad473  ./files/ops/pa
 c4054d3791e8d071eff14dce6374d92a7659a4b3b86e4585d12c886fa986248d  ./files/ops/paperclip-checkout
 86d9969c84c2dd5417f8a1ac518095955b1b64c4c163ab501fe1fc43f0e17077  ./files/ops/paperclip-emergency-control
 94b8ff8dc5585d487e224dd56e4d24a5b70aca01c71d487c69d600cdd21df67a  ./files/ops/paperclip-health.sh
-807dd8f8a0f90917c87c70e5c7ce7a2f1a3398ea3f61a67fd308b5deae214ed4  ./files/ops/paperclip-integration-regression
+6be93b31fd592a71af0f90eccc6bfd82be14fc705b3359b92bf9859e007b3615  ./files/ops/paperclip-integration-regression
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458  ./files/ops/paperclip-issue-update
 8304037e6e1ebfe9522564b33cbc66ceaa8082af6a40e118f435ae0b4761a657  ./files/ops/paperclip-network-policy
 b2b42ed870249c47ae1c5656f01da65f8cf90e2ee977bd63b615f13440214fd3  ./files/ops/paperclip-network-probe.py
 fee19889a1b10a4e28bb3401d34fed6c85e7dcf24c7d00986d61e8b30e5f0657  ./files/ops/paperclip-network-verify
+51c114ce26538347e7dd593dbffe1193d3e41a9ea93f1f9062d4ce222521005f  ./files/ops/paperclip-node-regression.mjs
 143eeb54397863e021765e61427d73c70642cb4b3675af166718308395b536af  ./files/ops/paperclip-offsite-sync.sh
 415da4b0eeb0e34699864138a30535e7b404f7fdaff96f5e8acc4c99a98fa8c1  ./files/ops/paperclip-secret-audit.sh
 c67dde0e148aa6a4a94959ab8f197db37731252fa35cfd0bdd4aba16f65dff8f  ./files/ops/paperclip-soak-sample.sh
@@ -60,7 +61,7 @@ d1a1a388ac3707c67a9cdf0c7c7108f7312c62dd853afe1ccf3b3cdcd4ca327a  ./files/system
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84  ./files/systemd/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f  ./files/systemd/paperclip.service
 6b535ca10a989773521086ae80eb7ab90fdc6da1cae757e46f723be822b522c7  ./locks/hermes-ddgs.requirements.txt
-01acbedb34aa9241e4cea415a47c2b3516b0436fd5baaa249956a4c6669fb840  ./locks/installed-assets.tsv
+2a17e5e2fad858bb22a13be45eeec8259d7bba66567229cdfec242c85cfe9491  ./locks/installed-assets.tsv
 974cf04cdd2f3e2fb8e55c7cc5f310842cc5fe48ae3e64bb80bab940c0de5331  ./locks/overlays.tsv
 209fa78fa15b073880c1b9466214bd9ba38c39f8cac12e62ea6aadec55386536  ./locks/paperclip/package-lock.json
 3b5f830e5b9023f4a03699827fa82f7add4f0334b8ed34c28b6104a44a19fde8  ./locks/paperclip/package.json
@@ -84,7 +85,7 @@ e8f669c57c81d49faee5f457c63f198b6bdc9eb307ba4adecb2342e2c4430ed8  ./overlays/pap
 f959ca3348e20dc6ea6d7e011e1f1fb11391a63ba1469fe12b3cfaad5dd8ca13  ./overlays/paperclip/node_modules/@paperclipai/server/dist/services/heartbeat.js
 1419f8150676ca43104accf5fcfa2190e1ac4cddf493f665a01e9506a105950f  ./scripts/apply-overlays
 ac9099e585694cb480911739d3e60c42e24fd50d50963a1c09bf9da2473fb23e  ./scripts/credential-install
-0ca044f7e8f5484029f84be0906e5ee999a8eb8448138d300f4af0e3aee5c6a8  ./scripts/functional-acceptance.sh
+1e486b04dcd8cf64fa9f16744c10ebf12e3039e422b5d131fa2141d86f1937b9  ./scripts/functional-acceptance.sh
 043fd82d4506730d9dc1aefa20ca8fb34dac26414fbad9a4c909832bbac88e7e  ./scripts/initialize-finalize
 5838af7612fe42ce2f970e4753c04c38c8140ed73f861ed4feae44d6f3286f28  ./scripts/initialize-pre
 98d7ffc5f58e4e5b07472959a58417e88ba6f11bc7c4164692224d803af80553  ./scripts/profile-init
@@ -92,4 +93,4 @@ b640e5db4a5f67abdd31ac1e2f3f7bdc94c438157bfaf53d4f8127e4d181b78b  ./tests/genera
 aec535ad5bb543925f6709a429a40b9277458f05e148461f795d4c0406ffac2e  ./tests/generate-manifest.sh
 e3d87b0d306ddcbaad206f3807cffdaefad9cc8c67a63278c6e4774cd4beb9bd  ./tests/static.sh
 8ba3c8dbf852282b61b7d9684001337b1b453e87e322965e74af218a1a146bda  ./tests/upstream.sh
-3dbc6054e960d3f1b54c7b1964f1243324a6d416001086eccf30b1184e3eacf6  ./verify.sh
+bb0009c4973c0b66e2edd53710dc2948c87b570fecfa51daca9fe606a569c892  ./verify.sh

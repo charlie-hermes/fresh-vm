@@ -162,7 +162,9 @@ grep -qx 'PAPERCLIP_OFFSITE_REQUIRED=true' /etc/paperclip/offsite-backup.conf ||
   fail "required off-host backup is not configured"
 
 /opt/paperclip/ops/functional-acceptance.sh
-jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot' \
+jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
+  .queuedObserved==true and .maxConcurrentObserved==2 and
+  (.roles|length)==4 and all(.roles[];.pass==true)' \
   /var/lib/paperclip/acceptance-evidence/functional-acceptance.json >/dev/null ||
   fail "functional evidence"
 echo "FUNCTIONAL ACCEPTANCE: PASS"

@@ -40,13 +40,13 @@ for slug in operations research production qa; do
   chown paperclip:paperclip "/srv/paperclip/workspaces/$slug/profile-sentinel.txt"
   case "$slug" in
     operations)
-      description="Use your delegation tool once with two parallel child tasks
+      description="Use your available parallel child-work capability once with two child tasks
 that return the exact non-secret words delegation-alpha and delegation-beta.
 Comment beginning fresh-vm-acceptance-pass:operations and include both child
 words, then mark done. On failure, comment the failure and mark blocked."
       ;;
     research)
-      description="Use web_search_hermes to find the official Python language
+      description="Use your available web-research capability to find the official Python language
 documentation URL. Comment beginning fresh-vm-acceptance-pass:research and
 include that URL, then mark done. On failure, comment the failure and mark
 blocked."
@@ -74,9 +74,11 @@ failure, comment the failure and mark blocked."
 done
 
 max_running=0
+queued_observed=false
 for attempt in $(seq 1 600); do
   pending=0
   running=0
+  queued=0
   for slug in operations research production qa; do
     issue_id=$(jq -r .issueId "$work/$slug.json")
     runs=$("$board" GET "/issues/$issue_id/runs")
@@ -84,12 +86,13 @@ for attempt in $(seq 1 600); do
     printf '%s\n' "$run" >"$work/$slug-run.json"
     status=$(jq -r '.status // "awaiting_dispatch"' <<<"$run")
     case "$status" in
-      queued|awaiting_dispatch) pending=$((pending + 1)) ;;
+      queued|awaiting_dispatch) pending=$((pending + 1)); queued=$((queued + 1)) ;;
       running) pending=$((pending + 1)); running=$((running + 1)) ;;
     esac
   done
   test "$running" -le 2 ||
     { echo "VM-wide concurrency limit exceeded: $running" >&2; exit 1; }
+  test "$queued" -eq 0 || queued_observed=true
   test "$running" -le "$max_running" || max_running=$running
   test "$pending" -gt 0 || break
   if test $((attempt % 15)) -eq 0; then
@@ -115,20 +118,23 @@ for slug in operations research production qa; do
   comment_pass=$(jq -e --arg agent "$agent_id" --arg prefix "fresh-vm-acceptance-pass:$slug" \
     'any(.[]; .authorAgentId==$agent and (.body|startswith($prefix)))' \
     <<<"$comments" >/dev/null && echo true || echo false)
-  run_log=$("$board" GET "/heartbeat-runs/$run_id/log" | jq -r '.content // ""')
+  run_log=$("$board" GET "/heartbeat-runs/$run_id/log?limitBytes=10485760" |
+    jq -r '.content // ""')
   if test "$slug" = operations; then
     delegation_pass=$(jq -e --arg agent "$agent_id" \
       'any(.[]; .authorAgentId==$agent and
         (.body|contains("delegation-alpha")) and (.body|contains("delegation-beta")))' \
       <<<"$comments" >/dev/null && echo true || echo false)
-    grep -Eqi 'delegate(_task)?|delegation' <<<"$run_log" ||
+    grep -Eq '^(\[done\][[:space:]]*)?┊[[:space:]]+🔀[[:space:]]+delegate[[:space:]]+2x:' \
+      <<<"$run_log" ||
       delegation_pass=false
   else
     delegation_pass=true
   fi
   tool_pass=true
   if test "$slug" = research; then
-    grep -q 'web_search_hermes' <<<"$run_log" || tool_pass=false
+    grep -Eq '^(\[done\][[:space:]]*)?┊[[:space:]]+⚡[[:space:]]+web_searc[[:space:]]' \
+      <<<"$run_log" || tool_pass=false
   fi
   marker_pass=false
   marker_file=/srv/paperclip/workspaces/$slug/fresh-vm-acceptance.txt
@@ -184,12 +190,16 @@ temporary=$(mktemp "$evidence_dir/.functional.XXXXXX")
 jq -s --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --arg bootId "$boot_id" --arg companyId "$company_id" \
   --arg projectId "$project_id" --argjson maxConcurrentObserved "$max_running" \
+  --argjson queuedObserved "$queued_observed" \
   --argjson pass "$all_pass" \
   '{timestamp:$timestamp,bootId:$bootId,companyId:$companyId,projectId:$projectId,
-    maxConcurrentObserved:$maxConcurrentObserved,roles:.,pass:$pass}' \
+    maxConcurrentObserved:$maxConcurrentObserved,queuedObserved:$queuedObserved,
+    roles:.,pass:($pass and $queuedObserved and $maxConcurrentObserved==2)}' \
   "$work/results.jsonl" >"$temporary"
 install -o root -g paperclip -m 0640 "$temporary" "$evidence"
 rm -f "$temporary"
 jq . "$evidence"
-test "$all_pass" = true || { echo "Functional acceptance failed" >&2; exit 1; }
+test "$all_pass" = true && test "$queued_observed" = true &&
+  test "$max_running" -eq 2 ||
+  { echo "Functional acceptance or global concurrency evidence failed" >&2; exit 1; }
 echo "Four-profile functional acceptance PASS"

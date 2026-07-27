@@ -65,6 +65,7 @@ systemctl start paperclip-offsite-sync.service
 systemctl enable --now \
   paperclip-backup.timer paperclip-health.timer \
   paperclip-offsite-sync.timer paperclip-soak-sample.timer >/dev/null
+rm -f -- /var/lib/paperclip-appliance/snapshot-only-commissioned
 
 echo "Provider credential installed into four isolated profiles."
 echo "Required encrypted off-host backup completed and verified."

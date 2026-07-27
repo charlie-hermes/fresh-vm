@@ -61,6 +61,33 @@ Off-host backup is mandatory for production readiness. Configure
 `verified: true` and `recoveryKeyEscrowed: true`. Root, local, bind, temporary,
 or same-source mounts do not satisfy this requirement.
 
+## Snapshot-only commissioning
+
+When the operator explicitly accepts VM-provider snapshots in place of the
+repository's offsite backup and separate recovery-key escrow, commission the
+four Hermes profiles with:
+
+```sh
+sudo ./configure-snapshot-only.sh --accept-provider-snapshot-risk \
+  /secure/path/hermes-auth.json
+sudo ./verify-snapshot-only.sh
+```
+
+The command reuses `paperclip-hermes-credential-install`, validates the exact
+`openai-codex: logged in` status sequentially in all four isolated homes, and
+records `/var/lib/paperclip-appliance/snapshot-only-commissioned` as a
+root-owned `0600` marker. The verifier runs real work through every profile,
+the secret audit, and the local encrypted-backup check. Its terminal status is
+always `PRODUCTION: NOT READY (SNAPSHOT-ONLY)`; provider snapshots are outside
+this repository's application-consistent restore and independent-control-plane
+evidence.
+
+Do not create `configured-boot-id`, offsite status, or recovery-key evidence by
+hand. To upgrade this appliance to the production standard, run the ordinary
+`configure-secrets.sh AUTH_JSON OFFSITE_CONFIG` flow. It clears the
+snapshot-only marker only after the required offsite backup succeeds; reboot
+and use `verify.sh` for the six production gates.
+
 ## Changing the four-agent factory
 
 The released appliance intentionally verifies exactly four profiles. Adding or

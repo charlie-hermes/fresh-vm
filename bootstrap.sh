@@ -237,5 +237,7 @@ systemctl enable --now paperclip.service
 
 step "Bootstrap complete"
 echo "The appliance is initialized with unique local secrets."
-echo "Next: sudo ./configure-secrets.sh AUTH_JSON OFFSITE_CONFIG"
+echo "Production: sudo ./configure-secrets.sh AUTH_JSON OFFSITE_CONFIG"
 echo "Then reboot before running: sudo ./verify.sh"
+echo "Snapshot-only: sudo ./configure-snapshot-only.sh --accept-provider-snapshot-risk AUTH_JSON"
+echo "Then run without rebooting: sudo ./verify-snapshot-only.sh"

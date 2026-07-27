@@ -143,6 +143,7 @@ installed_paperclip=$(node -p \
   "require('$paperclip_root/node_modules/paperclipai/package.json').version")
 test "$installed_paperclip" = "$PAPERCLIP_VERSION" ||
   die "Paperclip package version mismatch: $installed_paperclip"
+"$repo/scripts/prepare-embedded-postgres-runtime" "$paperclip_root"
 
 step "Install Hermes $HERMES_VERSION at the locked commit"
 hermes_root=/opt/hermes-agent/$HERMES_COMMIT

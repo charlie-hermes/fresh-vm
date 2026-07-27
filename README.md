@@ -6,7 +6,7 @@ stores the recipe, locked inputs, final source overlays, service definitions,
 security policy, and acceptance tests—not the VM disk, credentials, database,
 or machine identity.
 
-The intended operator flow is deliberately small:
+The intended production operator flow is deliberately small:
 
 ```bash
 git clone https://github.com/charlie-hermes/fresh-vm.git
@@ -32,6 +32,25 @@ BACKUP: PASS
 SYSTEMD FAILED UNITS: 0
 PRODUCTION: READY
 ```
+
+For an explicitly degraded deployment that relies on VM-provider snapshots
+instead of the repository's independently verified offsite backup and recovery
+key escrow, use the snapshot-only flow after bootstrap:
+
+```bash
+sudo ./configure-snapshot-only.sh --accept-provider-snapshot-risk \
+  /secure/path/hermes-auth.json
+sudo ./verify-snapshot-only.sh
+```
+
+This installs and validates the credential in all four isolated Hermes
+profiles, runs the real four-profile acceptance and secret audit, and verifies
+the local encrypted backup. It deliberately reports
+`PRODUCTION: NOT READY (SNAPSHOT-ONLY)` and never reports `BACKUP: PASS` or
+`PRODUCTION: READY`. No reboot is required for this flow. A later production
+commissioning remains supported by running `configure-secrets.sh` with two
+independent remote destinations and then following the normal reboot and
+`verify.sh` sequence.
 
 ## Before installation
 
@@ -93,7 +112,10 @@ target. One-time operator details are stored root-only at
    policy, and creates a unique initialized appliance.
 3. **Integrate secrets.** `configure-secrets.sh` validates and installs the
    provider credential, requires a real off-host mount, makes a fresh encrypted
-   backup, verifies replication, and records the pre-reboot boot ID.
+   backup, verifies replication, and records the pre-reboot boot ID. The
+   explicit `configure-snapshot-only.sh` alternative installs the credential
+   without creating that production marker and records the accepted degraded
+   mode separately.
 4. **Reboot and accept.** `verify.sh` requires a new boot, then makes all four
    employee profiles execute role-appropriate real Paperclip tasks. It
    independently verifies identity attribution, manager delegation, research

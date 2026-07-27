@@ -32,7 +32,7 @@ capacity. Do not bypass those checks.
 
 ## Required operator inputs
 
-Two secrets/integrations are intentionally absent from Git:
+Two secrets/integrations are intentionally absent from Git for production:
 
 1. A valid Hermes `auth.json`, supplied by an absolute path to a root-readable
    regular file.
@@ -41,7 +41,11 @@ Two secrets/integrations are intentionally absent from Git:
    recovery-key escrow.
 
 If the operator has not supplied both paths, run only the bootstrap and then
-ask for those two paths. Never paste their contents into chat, a command line,
+ask for those two paths. An operator may explicitly choose the supported
+snapshot-only mode, which requires the Hermes credential path and the literal
+`--accept-provider-snapshot-risk` acknowledgement. That mode must report
+`PRODUCTION: NOT READY (SNAPSHOT-ONLY)` and is not completion under the six
+release gates above. Never paste secret contents into chat, a command line,
 Git, logs, or issue comments.
 
 ## Execution
@@ -61,6 +65,13 @@ cd /path/to/fresh-vm
 sudo ./verify.sh
 ```
 
+For an explicitly authorized snapshot-only deployment:
+
+```bash
+sudo ./configure-snapshot-only.sh --accept-provider-snapshot-risk /secure/path/hermes-auth.json
+sudo ./verify-snapshot-only.sh
+```
+
 The scripts are intentionally idempotent. If an installation is interrupted,
 fix the reported external cause and rerun the same command. Do not delete
 Paperclip state, regenerate credentials, change pins, loosen security controls,
@@ -75,10 +86,11 @@ or replace an acceptance gate to make a rerun pass.
 - Preserve one isolated Hermes home and workspace per employee.
 - Preserve strict local secret encryption, JWT legacy-fallback denial, the
   Docker egress policy, global concurrency cap, encrypted backups, and required
-  verified offsite replication.
-- Post-reboot functional runs must be performed by all four employees and
-  independently inspected from the host. Static checks alone are not
-  acceptance.
+  verified offsite replication for production readiness. Snapshot-only mode
+  must remain visibly degraded and must not synthesize offsite evidence.
+- Functional runs must be performed by all four employees and independently
+  inspected from the host. Production acceptance requires those runs after the
+  commissioning reboot. Static checks alone are not acceptance.
 - Never commit credentials, generated instance data, evidence, or backup
   artifacts.
 

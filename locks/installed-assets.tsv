@@ -30,7 +30,7 @@ a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f	files/systemd/p
 39bd8bffd1daf3d37ce35439e52b80f8b9b1893f2a1093bdf5a5927ba6f5e061	docs/architecture-security.md	/opt/paperclip/integration/docs/architecture-security.md
 b35a6b1b8a801b3815fd63f433ba57056987a60cb4c9fea735eb61f099857dc2	docs/backup-restore.md	/opt/paperclip/integration/docs/backup-restore.md
 c8b21648c0c7a153d8c24456d29397e66e042b455d068ef3c8274f39d3d5b7e5	docs/employee-operations.md	/opt/paperclip/integration/docs/employee-operations.md
-b7f937e90b1fa227b857789272b5a9243c86381a5d4748e4cecc03341c3184c3	docs/operations-runbook.md	/opt/paperclip/integration/docs/operations-runbook.md
+5e891ced4b335259f7bb86abd9819984bbd4ec5077784db5a49f381d70a6266f	docs/operations-runbook.md	/opt/paperclip/integration/docs/operations-runbook.md
 d38cf11afc3b659bf24fe639f952a2d1707b758a7352ddc8aa47ac3571384fe8	docs/rollback.md	/opt/paperclip/integration/docs/rollback.md
 26872b960ea0fa875178c4b5f93c8c2b1a80a384b1abcbe7e671f046b8f1997a	docs/supervisory-operating-model.md	/opt/paperclip/integration/docs/supervisory-operating-model.md
 0b26e796301ef7185e6f40fbb987ea0e3b9d72f6a3562a29820e461b57fa39d7	docs/versions-patches.md	/opt/paperclip/integration/docs/versions-patches.md

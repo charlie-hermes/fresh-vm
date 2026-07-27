@@ -11,7 +11,8 @@ test -f MANIFEST.sha256
 sha256sum --check --strict MANIFEST.sha256 >/dev/null
 test "$(tests/generate-manifest.sh)" = "$(cat MANIFEST.sha256)"
 
-for script in bootstrap.sh configure-secrets.sh verify.sh scripts/* \
+for script in bootstrap.sh configure-secrets.sh configure-snapshot-only.sh \
+  verify.sh verify-snapshot-only.sh scripts/* \
   files/factory/skills/paperclip-employee/scripts/* tests/*.sh; do
   case "$script" in *.md) continue ;; esac
   bash -n "$script"
@@ -47,6 +48,7 @@ done <locks/installed-assets.tsv
 test "$(tests/generate-installed-assets.sh)" = "$(cat locks/installed-assets.tsv)"
 ./tests/tool-completion.sh >/dev/null
 ./tests/embedded-postgres-runtime.sh >/dev/null
+./tests/snapshot-only.sh >/dev/null
 
 if git ls-files --others --cached --exclude-standard 2>/dev/null |
    grep -E '(^|/)(auth\.json|\.env|hermes\.env|offsite-backup\.conf)$' >/dev/null; then

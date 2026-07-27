@@ -20,7 +20,8 @@ Do not claim completion if any line is absent.
 ## Supported target
 
 - Ubuntu 24.04 LTS (`noble`), amd64.
-- At least 4 vCPUs, 12 GiB RAM, and 30 GiB free on `/`.
+- At least 4 vCPUs, a 12 GB-class allocation reporting 11,500,000 KiB RAM or
+  more in `/proc/meminfo`, and 30 GiB free on `/`.
 - Internet access to Ubuntu, NodeSource, npm, GitHub, Python package indexes,
   and the Docker registry during installation.
 - Codex is already installed by the operator.

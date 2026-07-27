@@ -35,7 +35,7 @@ test "$(nproc)" -ge "$MIN_CPU_COUNT" ||
   die "at least $MIN_CPU_COUNT vCPUs are required"
 memory_kib=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
 test "$memory_kib" -ge "$MIN_MEMORY_KIB" ||
-  die "at least 12 GiB RAM is required"
+  die "at least $MIN_MEMORY_KIB KiB reported RAM (a 12 GB-class VM) is required"
 root_free_kib=$(df -Pk / | awk 'NR==2 {print $4}')
 test "$root_free_kib" -ge "$MIN_ROOT_FREE_KIB" ||
   die "at least 30 GiB free on / is required"

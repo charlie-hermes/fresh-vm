@@ -33,7 +33,7 @@ c8b21648c0c7a153d8c24456d29397e66e042b455d068ef3c8274f39d3d5b7e5	docs/employee-o
 b7f937e90b1fa227b857789272b5a9243c86381a5d4748e4cecc03341c3184c3	docs/operations-runbook.md	/opt/paperclip/integration/docs/operations-runbook.md
 d38cf11afc3b659bf24fe639f952a2d1707b758a7352ddc8aa47ac3571384fe8	docs/rollback.md	/opt/paperclip/integration/docs/rollback.md
 26872b960ea0fa875178c4b5f93c8c2b1a80a384b1abcbe7e671f046b8f1997a	docs/supervisory-operating-model.md	/opt/paperclip/integration/docs/supervisory-operating-model.md
-ff5e5baa0871d0b0a4e035d335f2848d3764ef978ac80e83e21ba60ff43ca0e7	docs/versions-patches.md	/opt/paperclip/integration/docs/versions-patches.md
+0b26e796301ef7185e6f40fbb987ea0e3b9d72f6a3562a29820e461b57fa39d7	docs/versions-patches.md	/opt/paperclip/integration/docs/versions-patches.md
 053d434b95666ad1eb97fec05b8f0a197e0b53787a22e309c19e8e2c54dd5d1f	files/factory/config.yaml.template	/opt/paperclip/integration/factory/config.yaml.template
 2410942fa11a70506b55a763a22266801508ee4da075993a20a6e4b750b7aa93	files/factory/roles/operations-manager/SKILL.md	/opt/paperclip/integration/factory/roles/operations-manager/SKILL.md
 892713991df913a7def6165e8065f586f2d4e8ce5c1df2e86947d1e05f6e7dc4	files/factory/roles/production-specialist/SKILL.md	/opt/paperclip/integration/factory/roles/production-specialist/SKILL.md
@@ -53,4 +53,4 @@ f41d7b261f6a6ae3095b46c02140676a3be504f0ed6cb51deeb6f55af6004c6e	files/paperclip
 98d7ffc5f58e4e5b07472959a58417e88ba6f11bc7c4164692224d803af80553	scripts/profile-init	/usr/local/sbin/paperclip-hermes-profile-init
 ac9099e585694cb480911739d3e60c42e24fd50d50963a1c09bf9da2473fb23e	scripts/credential-install	/usr/local/sbin/paperclip-hermes-credential-install
 bb0009c4973c0b66e2edd53710dc2948c87b570fecfa51daca9fe606a569c892	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-5a70a458bfea3f7ca4b3f1dde1907dcb01c68aa18ff046d3b5616d81adec8e42	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+3ae66804caf55bd1bf32de28f2e80bf0312d0ce96063423dd14e342eac1b03d7	appliance.lock	/opt/paperclip/integration/build/appliance.lock

@@ -35,9 +35,12 @@ PRODUCTION: READY
 
 ## Before installation
 
-Create an Ubuntu 24.04 LTS amd64 VM with at least 4 vCPUs, 12 GiB RAM, and
-30 GiB free disk. Install Codex manually and clone this repository. The
-installer creates 2 GiB swap if the VM has less than 1 GiB active swap.
+Create an Ubuntu 24.04 LTS amd64 VM with at least 4 vCPUs, a 12 GB-class RAM
+allocation reporting at least 11,500,000 KiB in `/proc/meminfo`, and 30 GiB
+free disk. This allowance accounts for hypervisor-reserved memory while
+retaining capacity above the appliance's 10 GiB combined runtime ceilings.
+Install Codex manually and clone this repository. The installer creates 2 GiB
+swap if the VM has less than 1 GiB active swap.
 
 Prepare, but do not put in this repository:
 

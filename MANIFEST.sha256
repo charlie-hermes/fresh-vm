@@ -1,12 +1,12 @@
 fb1a20674b0e0c15a3545eaad301e7b0a465642c75191e242cc7f22191e54ab9  ./.gitattributes
 74cbae5beb31f88a0fa893f3f02a1640f71d350b44e6823b8c6428558f787c92  ./.github/workflows/static.yml
 ed78bca5c0b71a02f49fea1de9da9efdf77c1a63c21ec340b94ce8e0b094580e  ./.gitignore
-bd231cdd1a7087827d049c50df638ae0f9c7612d0050ce8c15773595b3089751  ./AGENTS.md
+9d303e72e9ef20233d85c1a4e03934dbe499f724f6dee8829703b864983e008a  ./AGENTS.md
 d61a1db31017aa5a2601548678ea607c31341234778e3212e30c8569ddef4afa  ./LICENSE
-8a39645e353ca84b3cf703ee40fb57b38a736a1277494ce3711560aa36c5305f  ./README.md
+6bd1c92eb584d3960c9a87531502ab13dcf8f1c1445f22d06e3daa81bd6c50b9  ./README.md
 2dec6555d199dead2c6b610a8597b8d8a511b0675743f0362d8b8b560b6cea79  ./THIRD_PARTY_NOTICES.md
-5a70a458bfea3f7ca4b3f1dde1907dcb01c68aa18ff046d3b5616d81adec8e42  ./appliance.lock
-1b3c149e54f1ec90d2de33921991b3cf54fe8725baaaf160ece6b5be99f261e4  ./bootstrap.sh
+3ae66804caf55bd1bf32de28f2e80bf0312d0ce96063423dd14e342eac1b03d7  ./appliance.lock
+f2e83f18df0e8cbe84b5eb0854900814812235c5979ed7023c2dc6b1977452b1  ./bootstrap.sh
 c18158cd0471eea6cb396ac6afa449e907dae953e0d5b380c7d9342b8767f128  ./configure-secrets.sh
 39bd8bffd1daf3d37ce35439e52b80f8b9b1893f2a1093bdf5a5927ba6f5e061  ./docs/architecture-security.md
 b35a6b1b8a801b3815fd63f433ba57056987a60cb4c9fea735eb61f099857dc2  ./docs/backup-restore.md
@@ -14,7 +14,7 @@ c8b21648c0c7a153d8c24456d29397e66e042b455d068ef3c8274f39d3d5b7e5  ./docs/employe
 b7f937e90b1fa227b857789272b5a9243c86381a5d4748e4cecc03341c3184c3  ./docs/operations-runbook.md
 d38cf11afc3b659bf24fe639f952a2d1707b758a7352ddc8aa47ac3571384fe8  ./docs/rollback.md
 26872b960ea0fa875178c4b5f93c8c2b1a80a384b1abcbe7e671f046b8f1997a  ./docs/supervisory-operating-model.md
-ff5e5baa0871d0b0a4e035d335f2848d3764ef978ac80e83e21ba60ff43ca0e7  ./docs/versions-patches.md
+0b26e796301ef7185e6f40fbb987ea0e3b9d72f6a3562a29820e461b57fa39d7  ./docs/versions-patches.md
 020468de7539ce70ef1bceaf7cde2e8c4f2ca6c3afb84642aabc5c97d9fc2a0d  ./files/bin/jq
 21e070fd10f9d06e38752adf4b56bd506d835432f34908d7b43d720f4aa23276  ./files/docker/daemon.json
 053d434b95666ad1eb97fec05b8f0a197e0b53787a22e309c19e8e2c54dd5d1f  ./files/factory/config.yaml.template
@@ -62,7 +62,7 @@ d1a1a388ac3707c67a9cdf0c7c7108f7312c62dd853afe1ccf3b3cdcd4ca327a  ./files/system
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84  ./files/systemd/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f  ./files/systemd/paperclip.service
 6b535ca10a989773521086ae80eb7ab90fdc6da1cae757e46f723be822b522c7  ./locks/hermes-ddgs.requirements.txt
-e246ceb3d90d8a5f1b91bf7226980ae93079bf2a9653a7a68148e9829f631ee2  ./locks/installed-assets.tsv
+6b39412505b0035b7b26cd03f5b5c51c5e95451d6c8a08e804fc7cda9e3524a1  ./locks/installed-assets.tsv
 974cf04cdd2f3e2fb8e55c7cc5f310842cc5fe48ae3e64bb80bab940c0de5331  ./locks/overlays.tsv
 209fa78fa15b073880c1b9466214bd9ba38c39f8cac12e62ea6aadec55386536  ./locks/paperclip/package-lock.json
 3b5f830e5b9023f4a03699827fa82f7add4f0334b8ed34c28b6104a44a19fde8  ./locks/paperclip/package.json

@@ -2,8 +2,9 @@
 
 ## Host and components
 
-- Ubuntu 24.04 LTS (`noble`), amd64; minimum 4 vCPU, 12 GiB RAM, 30 GiB
-  free root-disk space, and 1 GiB active swap.
+- Ubuntu 24.04 LTS (`noble`), amd64; minimum 4 vCPU, a 12 GB-class allocation
+  reporting at least 11,500,000 KiB RAM, 30 GiB free root-disk space, and
+  1 GiB active swap.
 - Paperclip 2026.720.0: `/opt/paperclip/2026.720.0`.
 - Hermes Agent v0.19.0 (2026.7.20), commit `7de554277de632364c74fcf8641daa58a9a977d9`: `/opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9`.
 - Docker 29.1.3; containerd 2.2.1; runc 1.3.4; cgroup v2; overlayfs.

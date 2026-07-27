@@ -46,6 +46,7 @@ while IFS=$'\t' read -r expected source destination; do
 done <locks/installed-assets.tsv
 test "$(tests/generate-installed-assets.sh)" = "$(cat locks/installed-assets.tsv)"
 ./tests/tool-completion.sh >/dev/null
+./tests/embedded-postgres-runtime.sh >/dev/null
 
 if git ls-files --others --cached --exclude-standard 2>/dev/null |
    grep -E '(^|/)(auth\.json|\.env|hermes\.env|offsite-backup\.conf)$' >/dev/null; then

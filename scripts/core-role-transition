@@ -477,12 +477,13 @@ activate() {
   if test ! -f "$state/release-assets-installed" ||
      test "$already_active" = true; then
     /usr/local/sbin/paperclip-appliance-verify --platform-only
-    /opt/paperclip/ops/paperclip-backup.sh >/dev/null
   fi
   if test "$already_active" = true; then
     validate_current_core_credentials
   fi
   install_release_assets
+  systemctl disable --now \
+    paperclip-backup.timer paperclip-offsite-sync.timer >/dev/null
   touch "$state/release-assets-installed"
   chmod 0600 "$state/release-assets-installed"
   # shellcheck disable=SC1091
@@ -510,7 +511,6 @@ rollback() {
     exit 66
   }
   require_quiescent
-  /opt/paperclip/ops/paperclip-backup.sh >/dev/null
   perform_rollback_cutover
   echo "Legacy four-profile runtime restored; deploy the prior reviewed release for full verifier alignment"
 }

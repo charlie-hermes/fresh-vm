@@ -12,13 +12,7 @@ The intended operator flow is deliberately small:
 git clone https://github.com/charlie-hermes/fresh-vm.git
 cd fresh-vm
 sudo ./bootstrap.sh
-sudo ./configure-secrets.sh /secure/path/hermes-auth.json /secure/path/offsite-backup.conf
-sudo reboot
-```
-
-Reconnect, return to the clone, and run:
-
-```bash
+sudo ./configure-secrets.sh /secure/path/hermes-auth.json
 sudo ./verify.sh
 ```
 
@@ -28,7 +22,6 @@ Success is exactly:
 PLATFORM: PASS
 FUNCTIONAL ACCEPTANCE: PASS
 SECRET AUDIT: PASS
-BACKUP: PASS
 SYSTEMD FAILED UNITS: 0
 PRODUCTION: READY
 ```
@@ -42,22 +35,10 @@ retaining capacity above the appliance's 10 GiB combined runtime ceilings.
 Install Codex manually and clone this repository. The installer creates 2 GiB
 swap if the VM has less than 1 GiB active swap.
 
-Prepare, but do not put in this repository:
+Prepare a valid Hermes `auth.json`, but do not put it in this repository.
 
-- a valid Hermes `auth.json`;
-- two independently protected mounted remote filesystems: one for encrypted
-  backups and one for the recovery-key escrow;
-- an offsite configuration such as:
-
-```ini
-PAPERCLIP_OFFSITE_REQUIRED=true
-PAPERCLIP_OFFSITE_MOUNT=/mnt/paperclip-offsite
-PAPERCLIP_RECOVERY_ESCROW_MOUNT=/mnt/paperclip-key-escrow
-```
-
-Both mounts must already be supported remote filesystems, writable, and backed
-by different remote sources when `configure-secrets.sh` runs. A root, local,
-bind, or temporary filesystem does not count.
+VM snapshots, backups, and recovery are managed by the human VM owner. They are
+not required by this project and are not part of its final pass criteria.
 
 To give each client a distinct company name, use the optional first command:
 
@@ -79,12 +60,11 @@ sudo env PAPERCLIP_COMPANY_NAME="Client Name" ./bootstrap.sh
   checksum-bound role bundle, persistent container identity, memory, and session;
 - host firewall rules denying sandbox access to private/metadata networks,
   except the authenticated Paperclip route;
-- encrypted local database/state backup, verified offsite replication,
-  health/backup/soak timers, and emergency operations helpers.
+- health and soak timers, plus emergency operations helpers.
 
-Unique instance ID, hostname, JWT secret, Paperclip encryption key, backup
-passphrase, administrator password, and board API key are generated on the
-target. One-time operator details are stored root-only at
+Unique instance ID, hostname, JWT secret, Paperclip encryption key,
+administrator password, and board API key are generated on the target.
+One-time operator details are stored root-only at
 `/root/paperclip-firstboot-credentials`.
 
 ## The five phases
@@ -95,19 +75,16 @@ target. One-time operator details are stored root-only at
    applications, applies checksum-guarded overlays, installs systemd/network
    policy, and creates a unique initialized appliance.
 3. **Integrate secrets.** `configure-secrets.sh` validates and installs the
-   provider credential, requires a real off-host mount, makes a fresh encrypted
-   backup, verifies replication, and records the pre-reboot boot ID.
-4. **Reboot and accept.** `verify.sh` requires a new boot, then makes all eight
-   Core profiles execute role-appropriate Paperclip tasks from reset sessions.
-   It independently verifies exact Hermes `SOUL.md`/`AGENTS.md` loading,
-   managed-instruction parity, denied toolsets, identity attribution, approved
-   search, every workspace/container mount, socket isolation, comments,
-   completion, and the VM-wide concurrency limit.
+   provider credential.
+4. **Accept.** `verify.sh` makes all eight Core profiles execute
+   role-appropriate Paperclip tasks from reset sessions. It independently
+   verifies exact Hermes `SOUL.md`/`AGENTS.md` loading, managed-instruction
+   parity, denied toolsets, identity attribution, approved search, every
+   workspace/container mount, socket isolation, comments, completion, and the
+   VM-wide concurrency limit.
 5. **Release.** The same command scans persisted files and run logs for actual
-   credential values, decrypts and inventories a fresh backup, verifies the
-   corresponding offsite copy and separately escrowed recovery key, runs the
-   proprietary regression suite, checks every systemd unit, and emits the six
-   release gates.
+   credential values, runs the proprietary regression suite, checks every
+   systemd unit, and emits the five release gates.
 
 ## Reproducibility and idempotency
 

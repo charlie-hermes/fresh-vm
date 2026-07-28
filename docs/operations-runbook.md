@@ -4,7 +4,7 @@
 
 ```sh
 sudo systemctl status paperclip docker containerd --no-pager
-sudo systemctl status paperclip-health.timer paperclip-backup.timer --no-pager
+sudo systemctl status paperclip-health.timer paperclip-soak-sample.timer --no-pager
 curl -fsS http://172.30.0.1:3100/api/health | jq .
 sudo ss -lntp | grep -E '(:3100|:54329)'
 sudo docker ps --filter label=hermes-agent=1
@@ -52,21 +52,17 @@ sudo systemctl status paperclip-soak-sample.timer --no-pager
 sudo tail -n 20 /var/lib/paperclip/soak/samples.jsonl | jq .
 ```
 
-Off-host backup is mandatory for production readiness. Configure
-`/etc/paperclip/offsite-backup.conf`, set
-`PAPERCLIP_OFFSITE_REQUIRED=true`, name different supported remote mounts in
-`PAPERCLIP_OFFSITE_MOUNT` and `PAPERCLIP_RECOVERY_ESCROW_MOUNT`, start
-`paperclip-offsite-sync.service`, and confirm
-`/var/lib/paperclip/backups/offsite-status/last-success.json` reports
-`verified: true` and `recoveryKeyEscrowed: true`. Root, local, bind, temporary,
-or same-source mounts do not satisfy this requirement.
+VM snapshots, backups, and recovery are handled by the human VM owner outside
+this project. The bundled backup tools remain available for optional manual use,
+but their services and timers are disabled by default and are not release
+requirements.
 
 ## Changing or upgrading the eight-role factory
 
 The released appliance verifies exactly eight active Core profiles. Adding,
 removing, renaming, or re-authorising a role is a factory change, not an ad-hoc
 production operation: update the registry, initializer, profile builder,
-credential installer, backup documentation, functional acceptance, exact-count
+credential installer, functional acceptance, exact-count
 verification, and installed-asset locks together in a reviewed release.
 
 For an appliance running the prior four-profile release, use only the reviewed
@@ -77,12 +73,11 @@ sudo ./scripts/core-role-transition activate
 sudo ./verify.sh
 ```
 
-The transition refuses live runs/containers, makes an encrypted backup,
-preserves the legacy identity map, installs checksum-locked assets, creates and
-pauses the eight new profiles while they are prepared, verifies legacy
-credential copies are identical without printing them, then atomically cuts
-over the active identity map. Legacy employees and profile data are paused and
-retained for rollback; they are not deleted.
+The transition refuses live runs/containers, preserves the legacy identity map,
+installs checksum-locked assets, and pauses the eight new profiles while they
+are prepared. It verifies legacy credential copies without printing them, then
+atomically changes the active identity map. Legacy employees and profile data
+are retained for rollback; they are not deleted.
 
 A runtime-only rollback is available after confirming the employee plane is
 quiescent:
@@ -101,7 +96,7 @@ For every future factory change:
 1. Allocate a unique `/var/lib/paperclip/agents/<role>/home` and `/srv/paperclip/workspaces/<role>` owned by `paperclip:paperclip`.
 2. Install the checksum-bound `SOUL.md` in the home and `AGENTS.md` in the workspace; upload the same AGENTS bytes to Paperclip's managed bundle.
 3. Initialize a separate Hermes configuration/credential copy; never share sessions, memory, state DB, sandbox home, or writable credential files.
-4. Confirm the workspace remains below `/srv/paperclip/workspaces` and the dynamic backup includes it while excluding credentials/logs.
+4. Confirm the workspace remains below `/srv/paperclip/workspaces` and keeps credentials and logs isolated from task artifacts.
 5. Set adapter `env.HERMES_HOME` and `cwd` to the exact unique paths.
 6. Reset the runtime session, prove both context files loaded through the pinned Hermes prompt builder, then run a real Paperclip assignment.
 7. Verify every denied toolset, workspace sentinel, container mount, socket absence, role comment, and global concurrency evidence.

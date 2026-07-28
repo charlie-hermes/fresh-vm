@@ -2,7 +2,7 @@
 
 ## Safety first
 
-Before rollback, capture a database/state backup and confirm no heartbeat run is queued/running. Roll back one component at a time and run its focused regression tests.
+Before rollback, confirm no heartbeat run is queued or running. Follow any VM-level recovery process chosen by the human owner. Roll back one component at a time and run its focused regression tests.
 
 ## Hermes source patches
 
@@ -44,4 +44,4 @@ Removing `paperclip` from the Docker group revokes required rootful backend acce
 
 ## Full decommission
 
-Disable/stop Paperclip health/backup timers and Paperclip, preserve encrypted backups, then remove only explicitly enumerated Paperclip/Hermes state, workspaces, units, network, and service account. Do not use recursive deletion against `/home`, `/var/lib`, `/srv`, `/opt`, or a workspace root. Provider credentials and operator tokens must be revoked separately.
+Disable and stop the Paperclip health and soak timers and Paperclip, then remove only explicitly enumerated Paperclip/Hermes state, workspaces, units, network, and service account. Do not use recursive deletion against `/home`, `/var/lib`, `/srv`, `/opt`, or a workspace root. Provider credentials and operator tokens must be revoked separately.

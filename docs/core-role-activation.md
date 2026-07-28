@@ -42,12 +42,10 @@ Activation is a reviewed release operation, not normal employee work.
    sudo ./scripts/core-role-transition activate
    ```
 
-3. The command verifies the previous platform, creates an encrypted backup,
-   records the legacy four-role identity map, installs the locked release,
-   creates/updates the eight profiles and employees while paused, copies the
-   already-provisioned credential only after all four legacy copies are proven
-   identical, pauses the legacy employees, installs the new identity map,
-   resumes the Core roles, and resets every runtime session.
+3. The command verifies the previous platform, records the legacy four-role
+   identity map, installs the locked release, creates or updates the eight
+   profiles while paused, verifies credentials, changes the active identity
+   map, resumes the Core roles, and resets every runtime session.
 4. Reboot only if another configuration change requires it. Run:
 
    ```sh
@@ -59,8 +57,8 @@ transition status after `ERR`, `HUP`, `INT`, or `TERM` at every recoverable
 cutover checkpoint. `SIGKILL` cannot be trapped; after a killed transition,
 wait for all runs and containers to stop, then rerun the same `activate` or
 `rollback` command. Re-running `activate` against an active Core runtime first
-verifies the installed platform, creates an encrypted backup, and validates the
-eight current Core credential copies without replacing them from the retained
+verifies the installed platform and validates the eight current Core credential
+copies without replacing them from the retained
 legacy profiles. It then snapshots the current Core Paperclip configuration,
 permissions, managed instructions, status, identity map, and managed profile
 files before arming the distinct `reconcile` recovery mode and making any live
@@ -68,7 +66,7 @@ employee mutation. A recoverable
 failure restores that snapshot, the Core identity map, and the prior transition
 status; a later retry also restores a snapshot left by `SIGKILL` before retrying.
 
-Do not report activation complete until all six release lines pass.
+Do not report activation complete until all five release lines pass.
 
 ## What acceptance proves
 
@@ -117,8 +115,8 @@ With zero live runs and zero Hermes containers:
 sudo /usr/local/sbin/paperclip-core-role-transition rollback
 ```
 
-The command makes another encrypted backup, pauses all Core roles, restores the
-legacy identity map, and resumes the legacy employees. New profiles are
-retained for investigation and recovery. Deploy the prior reviewed appliance
-commit immediately afterward; the current verifier intentionally will not
-certify a rolled-back four-role runtime as the current eight-role release.
+The command pauses all Core roles, restores the legacy identity map, and resumes
+the legacy employees. New profiles are retained for investigation. Deploy the
+prior reviewed appliance commit immediately afterward; the current verifier
+intentionally will not certify a rolled-back four-role runtime as the current
+eight-role release.

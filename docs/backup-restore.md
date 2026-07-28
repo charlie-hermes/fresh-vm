@@ -1,12 +1,12 @@
 # Backup and restore
 
-## Schedule and retention
+## Optional tooling
 
-`paperclip-backup.timer` runs daily with persistent catch-up. Paperclip's
-built-in plaintext database backup is disabled. The integration backup stages
-database and state data in a protected runtime directory, encrypts and verifies
-both artifacts, removes the staging directory on every exit, and retains only
-encrypted artifacts for 30 days.
+Backups are not created, scheduled, or required by this project. VM snapshots,
+backups, and recovery are managed by the human VM owner.
+
+The bundled backup service is retained only for optional manual use. Before
+using it, the owner must create and protect its encryption passphrase.
 
 Manual backup:
 
@@ -37,11 +37,9 @@ Excluded from plaintext state archives:
 - Root-owned `/etc/paperclip` secrets.
 - Browser binaries/caches and pinned application runtimes; reinstall them from the documented pins.
 
-Provider and operator credentials require a separate encrypted backup or fresh
-login/rotation. The backup-encryption passphrase is escrowed during every
-offsite sync to the independently mounted recovery store. A production
-commissioning pass fails if backup storage and key escrow resolve to the same
-remote source.
+Any optional backup of provider or operator credentials, encryption keys, and
+recovery material is the human VM owner's responsibility. The project verifier
+does not inspect or require it.
 
 Pre-fix state archives created before the instance `.env` and transient-log exclusions were added were deleted after a corrected archive validated. Generic token-signature scans may identify non-live placeholders in the bundled `native-mcp.md` skill reference; actual-value scans against live credentials must remain zero.
 
@@ -71,7 +69,7 @@ Compare representative workspace, config, memory, session/checkpoint, unit, and 
 
 ## Production restore outline
 
-1. Record current versions and make a fresh backup if readable.
+1. Record current versions and follow the human VM owner's recovery process.
 2. Stop Paperclip; keep Docker stopped if restoring sandbox state.
 3. Reinstall the exact Paperclip/Hermes/runtime pins and local patches from `/opt/paperclip/integration`.
 4. Restore the state archive to `/` as root, preserving numeric owners.

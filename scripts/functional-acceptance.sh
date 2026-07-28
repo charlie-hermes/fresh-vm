@@ -368,10 +368,9 @@ while IFS=$'\t' read -r slug _; do
       company_issues=$("$board" GET "/companies/$company_id/issues")
       denied_children=$(jq --arg parent "$issue_id" \
         '[.[] | select(.parentId==$parent)] | length' <<<"$company_issues")
-      denial_trace_count=$(grep -Fc \
-        "POST /companies/$company_id/issues?acceptanceProbe=$marker 403" \
-        "$work/paperclip-journal.log" || true)
-      test "$denial_trace_count" -eq 1 || denial_trace_pass=false
+      /opt/paperclip/ops/paperclip-http-denial-check \
+        "$company_id" "$marker" <"$work/paperclip-journal.log" ||
+        denial_trace_pass=false
       if test "$denied_children" -ne 0 || test "$denial_trace_pass" != true ||
          ! jq -e --arg agent "$agent_id" \
            'any(.[]; .authorAgentId==$agent and (.body|contains("assignment-denied:true")))' \

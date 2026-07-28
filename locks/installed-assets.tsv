@@ -4,6 +4,7 @@ e4af246514861ed58c7ef7658003061fe264d406ca1110764b4cf9d967bad473	files/ops/paper
 c4054d3791e8d071eff14dce6374d92a7659a4b3b86e4585d12c886fa986248d	files/ops/paperclip-checkout	/opt/paperclip/ops/paperclip-checkout
 86d9969c84c2dd5417f8a1ac518095955b1b64c4c163ab501fe1fc43f0e17077	files/ops/paperclip-emergency-control	/opt/paperclip/ops/paperclip-emergency-control
 94b8ff8dc5585d487e224dd56e4d24a5b70aca01c71d487c69d600cdd21df67a	files/ops/paperclip-health.sh	/opt/paperclip/ops/paperclip-health.sh
+09ac8a59bb324b4caec335bdc9ebc0f9b3fca8513cc6ecae2d34879301a8b090	files/ops/paperclip-http-denial-check	/opt/paperclip/ops/paperclip-http-denial-check
 6be93b31fd592a71af0f90eccc6bfd82be14fc705b3359b92bf9859e007b3615	files/ops/paperclip-integration-regression	/opt/paperclip/ops/paperclip-integration-regression
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458	files/ops/paperclip-issue-update	/opt/paperclip/ops/paperclip-issue-update
 8304037e6e1ebfe9522564b33cbc66ceaa8082af6a40e118f435ae0b4761a657	files/ops/paperclip-network-policy	/opt/paperclip/ops/paperclip-network-policy
@@ -67,7 +68,7 @@ e692d9caefff952a6ef12296dccdf8080ae23c00b7bda0a2bd26e4737928f426	files/paperclip
 59de0c5b0879e2e5e4ad8b1fbc31fdc5d5bebbe707f20f3b4f253a6420130634	files/paperclip/AGENTS-research.md	/opt/paperclip/integration/paperclip/AGENTS-research.md
 e810e41a42d9d7b545179a6e5b8c1cb1552ee876bbbda63a661ae2c49b03cf31	files/paperclip/config.json	/opt/paperclip/integration/paperclip/config.json
 f41d7b261f6a6ae3095b46c02140676a3be504f0ed6cb51deeb6f55af6004c6e	files/paperclip/offsite-backup.conf.example	/opt/paperclip/integration/paperclip/offsite-backup.conf.example
-d12c531f8385d92eccb303f02540fd084c658abac0801ca26ef3cf99c7ee7e57	scripts/functional-acceptance.sh	/opt/paperclip/ops/functional-acceptance.sh
+498f059bd670ea520dca902156070dbbc85b9166d0e14897a995061e98617608	scripts/functional-acceptance.sh	/opt/paperclip/ops/functional-acceptance.sh
 57dce821647449415e8c8246138d95f888592179cb323695598e76811e1459d8	scripts/profile-init	/usr/local/sbin/paperclip-hermes-profile-init
 f6386840b596dd66bfdfb1f0e0e7310e7974600babec4e917d7af66f278ecbf4	scripts/credential-install	/usr/local/sbin/paperclip-hermes-credential-install
 09ca1bc1d1684055347925483689cd5ccc8bf49c6b35a8a3cb3d356360e693d8	scripts/core-role-transition	/usr/local/sbin/paperclip-core-role-transition

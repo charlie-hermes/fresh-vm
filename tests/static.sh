@@ -58,7 +58,7 @@ grep -q "trap 'restore_transition 129' HUP" scripts/core-role-transition
 grep -q "trap 'restore_transition 130' INT" scripts/core-role-transition
 grep -q "trap 'restore_transition 143' TERM" scripts/core-role-transition
 grep -q "runId // .id" scripts/functional-acceptance.sh
-grep -q "acceptanceProbe=\$marker 403" scripts/functional-acceptance.sh
+grep -q "paperclip-http-denial-check" scripts/functional-acceptance.sh
 
 while IFS=$'\t' read -r component _ final relative; do
   case "$component" in ""|\#*) continue ;; esac
@@ -74,6 +74,7 @@ while IFS=$'\t' read -r expected source destination; do
 done <locks/installed-assets.tsv
 test "$(tests/generate-installed-assets.sh)" = "$(cat locks/installed-assets.tsv)"
 ./tests/tool-completion.sh >/dev/null
+./tests/http-denial-evidence.sh >/dev/null
 ./tests/core-transition.sh >/dev/null
 
 if git ls-files --others --cached --exclude-standard 2>/dev/null |

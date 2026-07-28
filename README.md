@@ -72,8 +72,11 @@ sudo env PAPERCLIP_COMPANY_NAME="Client Name" ./bootstrap.sh
 - Hermes `0.19.0` at commit
   `7de554277de632364c74fcf8641daa58a9a977d9`;
 - a digest-pinned Python/Node Docker sandbox and isolated Docker bridge;
-- Operations, Research, Production, and QA employees, each with a separate
-  Hermes home, workspace, persistent container identity, memory, and session;
+- the eight approved Agency Core employees—Agency Director, Brand and Brief
+  Steward, Search and Content Strategist, Content Producer, Search and Answer
+  Optimiser, Editorial Integrity QA, Publishing Operator, and Growth
+  Intelligence Analyst—each with a separate Hermes home, workspace, exact
+  checksum-bound role bundle, persistent container identity, memory, and session;
 - host firewall rules denying sandbox access to private/metadata networks,
   except the authenticated Paperclip route;
 - encrypted local database/state backup, verified offsite replication,
@@ -94,11 +97,12 @@ target. One-time operator details are stored root-only at
 3. **Integrate secrets.** `configure-secrets.sh` validates and installs the
    provider credential, requires a real off-host mount, makes a fresh encrypted
    backup, verifies replication, and records the pre-reboot boot ID.
-4. **Reboot and accept.** `verify.sh` requires a new boot, then makes all four
-   employee profiles execute role-appropriate real Paperclip tasks. It
-   independently verifies identity attribution, manager delegation, research
-   search, production/QA workspace mounts and socket isolation, comments, and
-   completion.
+4. **Reboot and accept.** `verify.sh` requires a new boot, then makes all eight
+   Core profiles execute role-appropriate Paperclip tasks from reset sessions.
+   It independently verifies exact Hermes `SOUL.md`/`AGENTS.md` loading,
+   managed-instruction parity, denied toolsets, identity attribution, approved
+   search, every workspace/container mount, socket isolation, comments,
+   completion, and the VM-wide concurrency limit.
 5. **Release.** The same command scans persisted files and run logs for actual
    credential values, decrypts and inventories a fresh backup, verifies the
    corresponding offsite copy and separately escrowed recovery key, runs the
@@ -123,6 +127,7 @@ changing the lock in a reviewed branch.
 Start with:
 
 - `docs/architecture-security.md`
+- `docs/core-role-activation.md`
 - `docs/operations-runbook.md`
 - `docs/backup-restore.md`
 - `docs/rollback.md`

@@ -32,6 +32,23 @@ test "$(node -p "require('./locks/paperclip/package-lock.json').packages['node_m
 test "$(files/bin/jq --version)" = "jq-$JQ_VERSION"
 test "$(sha256sum files/bin/jq | awk '{print $1}')" = "$JQ_SHA256"
 
+registry=files/factory/core-roles.tsv
+test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 8
+test "$(awk -F '\t' '$1 !~ /^#/ && NF {print $1}' "$registry" | sort -u | wc -l)" -eq 8
+test "$(awk -F '\t' '$1 !~ /^#/ && NF && $5=="-" {print $1}' "$registry")" =   agency-director
+while IFS=$'\t' read -r slug _ role _ reports denied agents_sha soul_sha; do
+  case "$slug" in ""|\#*) continue;; esac
+  case "$role" in ceo|pm|researcher|designer|qa|devops) ;; *) exit 1;; esac
+  case "$reports" in -|agency-director) ;; *) exit 1;; esac
+  test "$(sha256sum "files/factory/core-roles/$slug/AGENTS.md" | awk '{print $1}')" =     "$agents_sha"
+  test "$(sha256sum "files/factory/core-roles/$slug/SOUL.md" | awk '{print $1}')" =     "$soul_sha"
+  IFS=, read -r -a denied_list <<<"$denied"
+  test "${#denied_list[@]}" -gt 0
+  for tool in "${denied_list[@]}"; do
+    grep -qx "    - $tool" files/factory/config.yaml.template
+  done
+done <"$registry"
+
 while IFS=$'\t' read -r component _ final relative; do
   case "$component" in ""|\#*) continue ;; esac
   target="overlays/$component/$relative"

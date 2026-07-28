@@ -103,19 +103,65 @@ platform_check() {
 
   company_id=$(tr -d '\n' </etc/paperclip/company-id)
   agents=$(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company_id/agents")
-  test "$(jq '[.[] | select(.adapterType=="hermes_local")]|length' <<<"$agents")" -eq 4 ||
-    fail "Hermes employee count"
-  jq -e 'all(.[];
-    .permissions.canCreateAgents==false and
+  registry=/opt/paperclip/integration/factory/core-roles.tsv
+  agent_ids=/etc/paperclip/hermes-agent-ids.json
+  jq -e 'all(.[]; .permissions.canCreateAgents==false and
     .permissions.canCreateSkills==false)' <<<"$agents" >/dev/null ||
-    fail "Hermes employee authority drift"
-  for slug in operations research production qa; do
-    test -f "/var/lib/paperclip/agents/$slug/.PROFILE_READY" ||
+    fail "employee creation authority drift"
+  test "$(jq 'length' "$agent_ids")" -eq 8 || fail "Core employee identity count"
+  core_id_array=$(jq -c '[.[]]' "$agent_ids")
+  test "$(jq --argjson ids "$core_id_array" \
+    '[.[] | .id as $id |
+      select(.adapterType=="hermes_local" and ($ids|index($id)))] | length' \
+    <<<"$agents")" -eq 8 || fail "Core Hermes employee count"
+  jq -e --argjson ids "$core_id_array" 'all(.[];
+    .id as $id |
+    if .adapterType=="hermes_local" and (($ids|index($id))|not)
+    then .status=="paused" else true end)' <<<"$agents" >/dev/null ||
+    fail "non-Core Hermes employee remains active"
+  director_id=$(jq -er '.["agency-director"]' "$agent_ids")
+  while IFS=$'\t' read -r slug name role title reports denied agents_sha soul_sha; do
+    case "$slug" in ""|\#*) continue;; esac
+    agent_id=$(jq -er --arg slug "$slug" '.[$slug]' "$agent_ids")
+    agent=$(jq -c --arg id "$agent_id" '.[] | select(.id==$id)' <<<"$agents")
+    test -n "$agent" || fail "missing Core employee: $slug"
+    reports_id=$director_id
+    test "$reports" != - || reports_id=
+    can_assign=false
+    test "$slug" != agency-director || can_assign=true
+    jq -e --arg slug "$slug" --arg name "$name" --arg role "$role" \
+      --arg title "$title" --arg cwd "/srv/paperclip/workspaces/$slug" \
+      --arg home "/var/lib/paperclip/agents/$slug/home" --arg reports "$reports_id" \
+      --arg command "/opt/hermes-agent/$HERMES_COMMIT/venv/bin/hermes" \
+      --argjson assign "$can_assign" '
+        .name==$name and .role==$role and .title==$title and
+        .adapterType=="hermes_local" and .metadata.agencyOsCoreRole==true and
+        .metadata.roleId==$slug and .adapterConfig.cwd==$cwd and
+        .adapterConfig.env.HERMES_HOME.value==$home and
+        .adapterConfig.hermesCommand==$command and
+        .adapterConfig.provider=="openai-codex" and
+        .adapterConfig.model=="gpt-5.6-sol" and
+        .adapterConfig.paperclipApiUrl=="http://paperclip-host:3100" and
+        .adapterConfig.persistSession==true and .adapterConfig.checkpoints==true and
+        .adapterConfig.worktreeMode==false and
+        .adapterConfig.extraArgs==["--pass-session-id"] and
+        .adapterConfig.instructionsBundleMode=="managed" and
+        .runtimeConfig.heartbeat.enabled==false and
+        .runtimeConfig.heartbeat.maxConcurrentRuns==1 and
+        .permissions.canCreateAgents==false and
+        .permissions.canCreateSkills==false and
+        .permissions.canAssignTasks==$assign and
+        .permissions.trustPreset=="standard" and
+        (if $reports=="" then .reportsTo==null else .reportsTo==$reports end)' \
+      <<<"$agent" >/dev/null || fail "Core employee configuration drift: $slug"
+    test "$(cat "/var/lib/paperclip/agents/$slug/.PROFILE_READY")" = "$slug" ||
       fail "incomplete $slug profile"
-    test -f "/var/lib/paperclip/agents/$slug/home/config.yaml" ||
-      fail "missing $slug profile"
-    test -d "/srv/paperclip/workspaces/$slug" || fail "missing $slug workspace"
-  done
+    test "$(sha256sum "/srv/paperclip/workspaces/$slug/AGENTS.md" | awk '{print $1}')" = \
+      "$agents_sha" || fail "$slug AGENTS.md drift"
+    test "$(sha256sum "/var/lib/paperclip/agents/$slug/home/SOUL.md" | awk '{print $1}')" = \
+      "$soul_sha" || fail "$slug SOUL.md drift"
+    test -f "/var/lib/paperclip/agents/$slug/home/config.yaml" || fail "missing $slug profile"
+  done <"$registry"
 
   overlay_manifest=/opt/paperclip/integration/build/locks/overlays.tsv
   test -f "$overlay_manifest" || fail "installed overlay manifest missing"
@@ -146,12 +192,16 @@ test -f /var/lib/paperclip-appliance/hermes-credential-installed ||
   fail "Hermes provider credential has not been installed"
 company_id=$(tr -d '\n' </etc/paperclip/company-id)
 agents=$(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company_id/agents")
-test "$(jq '[.[] | select(.adapterType=="hermes_local" and .status!="paused")]|length' \
-  <<<"$agents")" -eq 4 || fail "one or more Hermes employees remain paused"
-for slug in operations research production qa; do
+core_id_array=$(jq -c '[.[]]' /etc/paperclip/hermes-agent-ids.json)
+test "$(jq --argjson ids "$core_id_array" \
+  '[.[] | .id as $id | select(.adapterType=="hermes_local" and
+    ($ids|index($id)) and .status!="paused")] | length' \
+  <<<"$agents")" -eq 8 || fail "one or more Core Hermes employees remain paused"
+while IFS=$'\t' read -r slug _; do
+  case "$slug" in ""|\#*) continue;; esac
   test "$(stat -c '%a:%U' "/var/lib/paperclip/agents/$slug/home/auth.json")" = \
     "600:paperclip" || fail "$slug credential permissions"
-done
+done </opt/paperclip/integration/factory/core-roles.tsv
 test -f /var/lib/paperclip-appliance/configured-boot-id ||
   fail "configuration boot marker is missing"
 configured_boot=$(tr -d '\n' </var/lib/paperclip-appliance/configured-boot-id)
@@ -164,7 +214,10 @@ grep -qx 'PAPERCLIP_OFFSITE_REQUIRED=true' /etc/paperclip/offsite-backup.conf ||
 /opt/paperclip/ops/functional-acceptance.sh
 jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
   .queuedObserved==true and .maxConcurrentObserved==2 and
-  (.roles|length)==4 and all(.roles[];.pass==true)' \
+  (.roles|length)==8 and all(.roles[];.pass==true) and
+  (.runtimeBundles|length)==8 and all(.runtimeBundles[];
+    .pass==true and .freshProcess==true and .soulLoadedExactly==true and
+    .agentsLoadedExactly==true and .managedInstructionsExact==true)' \
   /var/lib/paperclip/acceptance-evidence/functional-acceptance.json >/dev/null ||
   fail "functional evidence"
 echo "FUNCTIONAL ACCEPTANCE: PASS"

@@ -10,6 +10,7 @@ base=http://172.30.0.1:3100
 api=$base/api
 template=/opt/paperclip/integration/paperclip
 factory=/usr/local/sbin/paperclip-hermes-profile-init
+factory_assets=/opt/paperclip/integration/factory
 credential_installer=/usr/local/sbin/paperclip-hermes-credential-install
 # shellcheck disable=SC1091
 . /opt/paperclip/integration/build/appliance.lock
@@ -121,7 +122,7 @@ create_agent() {
     --arg cwd "/srv/paperclip/workspaces/$slug" \
     --arg home "/var/lib/paperclip/agents/$slug/home" \
     --arg hermesCommand "/opt/hermes-agent/$HERMES_COMMIT/venv/bin/hermes" \
-    --arg reports "$reports_to" \
+    --arg reports "$reports_to" --arg roleId "$slug" \
     '{
       name:$name, role:$role, title:$title, adapterType:"hermes_local",
       adapterConfig:{
@@ -135,7 +136,9 @@ create_agent() {
         instructionsBundleMode:"managed", instructionsEntryFile:"AGENTS.md"
       },
       runtimeConfig:{heartbeat:{enabled:false,maxConcurrentRuns:1}},
-      permissions:{canCreateAgents:false,canCreateSkills:false,trustPreset:"standard"}
+      permissions:{canCreateAgents:false,canCreateSkills:false,canAssignTasks:false,
+        trustPreset:"standard"},
+      metadata:{agencyOsCoreRole:true,roleId:$roleId}
     } + (if $reports=="" then {} else {reportsTo:$reports} end)')
     api_call POST "/companies/$company_id/agents" "$payload" >"$body"
     agent_id=$(jq -er '.id' "$body")
@@ -143,28 +146,52 @@ create_agent() {
   api_call PUT "/agents/$agent_id/instructions-bundle/file" \
     "$(jq -n --rawfile c "$instructions" \
       '{path:"AGENTS.md",content:$c,clearLegacyPromptTemplate:true}')" >/dev/null
+  can_assign=false
+  test "$slug" != agency-director || can_assign=true
+  api_call PATCH "/agents/$agent_id/permissions" \
+    "$(jq -nc --argjson assign "$can_assign" \
+      '{canCreateAgents:false,canCreateSkills:false,canAssignTasks:$assign,
+        trustPreset:"standard"}')" >/dev/null
   printf '%s\n' "$agent_id"
 }
 
 if [ ! -f /etc/paperclip/hermes-agent-ids.json ]; then
-  operations_id=$(create_agent operations operations-manager \
-    "Operations Manager" pm "Operations Manager" "" "$template/AGENTS-operations.md")
-  research_id=$(create_agent research research-strategy \
-    "Research and Strategy Specialist" researcher "Research and Strategy Specialist" \
-    "$operations_id" "$template/AGENTS-research.md")
-  production_id=$(create_agent production production-specialist \
-    "Production Specialist" designer "Production Specialist" \
-    "$operations_id" "$template/AGENTS-production.md")
-  qa_id=$(create_agent qa qa-reviewer \
-    "QA Reviewer" qa "Independent QA Reviewer" \
-    "$operations_id" "$template/AGENTS-qa.md")
-  jq -n --arg o "$operations_id" --arg r "$research_id" \
-    --arg p "$production_id" --arg q "$qa_id" \
-    '{operations:$o,research:$r,production:$p,qa:$q}' \
+  director_id=$(create_agent agency-director agency-director \
+    "Agency Director" ceo "Agency Director" "" \
+    "$factory_assets/core-roles/agency-director/AGENTS.md")
+  steward_id=$(create_agent brand-brief-steward brand-brief-steward \
+    "Brand and Brief Steward" pm "Brand and Brief Steward" "$director_id" \
+    "$factory_assets/core-roles/brand-brief-steward/AGENTS.md")
+  strategist_id=$(create_agent search-content-strategist search-content-strategist \
+    "Search and Content Strategist" researcher "Search and Content Strategist" \
+    "$director_id" "$factory_assets/core-roles/search-content-strategist/AGENTS.md")
+  producer_id=$(create_agent content-producer content-producer \
+    "Content Producer" designer "Content Producer" "$director_id" \
+    "$factory_assets/core-roles/content-producer/AGENTS.md")
+  optimiser_id=$(create_agent search-answer-optimiser search-answer-optimiser \
+    "Search and Answer Optimiser" researcher "Search and Answer Optimiser" \
+    "$director_id" "$factory_assets/core-roles/search-answer-optimiser/AGENTS.md")
+  editorial_id=$(create_agent editorial-integrity-qa editorial-integrity-qa \
+    "Editorial Integrity QA" qa "Editorial Integrity QA" "$director_id" \
+    "$factory_assets/core-roles/editorial-integrity-qa/AGENTS.md")
+  publishing_id=$(create_agent publishing-operator publishing-operator \
+    "Publishing Operator" devops "Publishing Operator" "$director_id" \
+    "$factory_assets/core-roles/publishing-operator/AGENTS.md")
+  growth_id=$(create_agent growth-intelligence-analyst growth-intelligence-analyst \
+    "Growth Intelligence Analyst" researcher "Growth Intelligence Analyst" \
+    "$director_id" "$factory_assets/core-roles/growth-intelligence-analyst/AGENTS.md")
+  jq -n --arg director "$director_id" --arg steward "$steward_id" \
+    --arg strategist "$strategist_id" --arg producer "$producer_id" \
+    --arg optimiser "$optimiser_id" --arg editorial "$editorial_id" \
+    --arg publishing "$publishing_id" --arg growth "$growth_id" \
+    '{"agency-director":$director,"brand-brief-steward":$steward,
+      "search-content-strategist":$strategist,"content-producer":$producer,
+      "search-answer-optimiser":$optimiser,"editorial-integrity-qa":$editorial,
+      "publishing-operator":$publishing,"growth-intelligence-analyst":$growth}' \
     > "$bootstrap/hermes-agent-ids.json"
   install -o root -g root -m 0600 \
     "$bootstrap/hermes-agent-ids.json" /etc/paperclip/hermes-agent-ids.json
-  printf '%s\n' "$operations_id" > /etc/paperclip/hermes-agent-id
+  printf '%s\n' "$director_id" > /etc/paperclip/hermes-agent-id
   chmod 0600 /etc/paperclip/hermes-agent-id
 fi
 

@@ -76,9 +76,9 @@ or replace an acceptance gate to make a rerun pass.
 - Preserve strict local secret encryption, JWT legacy-fallback denial, the
   Docker egress policy, global concurrency cap, encrypted backups, and required
   verified offsite replication.
-- Post-reboot functional runs must be performed by all four employees and
-  independently inspected from the host. Static checks alone are not
-  acceptance.
+- Post-reboot functional runs must be performed by all eight Core employees
+  from reset sessions and independently inspected from the host. Static checks
+  or file presence alone are not acceptance.
 - Never commit credentials, generated instance data, evidence, or backup
   artifacts.
 

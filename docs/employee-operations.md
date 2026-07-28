@@ -19,17 +19,40 @@ Dependencies should use `blockedByIssueIds`. Managers create child issues with `
 
 ## Employee hierarchy
 
-The Operations Manager may assign tasks but cannot create agents or skills. Research, Production, and QA cannot assign tasks, create agents, or create skills. All employees have `maxConcurrentRuns=1`; the VM-wide scheduler cap is two runs. This allows collaboration without letting a single company exhaust the host.
+The Agency Director is the only Core employee allowed to assign tasks. It
+cannot create agents or skills, change the appliance, resolve its own approval,
+or act as a specialist. The other seven Core roles cannot assign work, create
+agents, or create skills. Every employee has `maxConcurrentRuns=1`; the VM-wide
+scheduler cap remains two.
 
-The four profiles have distinct Hermes homes, workspaces, role skills, session/memory stores, sandbox homes, and Docker reuse identities. They currently use separate copies of the same provisioned provider credential. That is filesystem isolation, not provider-account isolation; use distinct provider credentials if a client requires per-employee provider attribution or revocation.
+The eight profiles have distinct Hermes homes, workspaces, exact
+`AGENTS.md`/`SOUL.md` role bundles, session/memory stores, sandbox homes, and
+Docker reuse identities. They use separate filesystem copies of the same
+provisioned provider credential. That is filesystem isolation, not
+provider-account isolation; use distinct provider credentials if a client
+requires per-employee provider attribution or revocation.
+
+The hierarchy is intentionally shallow: all specialists report to the Agency
+Director. Workflow separation is expressed by Paperclip ownership,
+dependencies, review, and approval records—not by giving specialists general
+delegation authority. The active roles are:
+
+- Agency Director
+- Brand and Brief Steward
+- Search and Content Strategist
+- Content Producer
+- Search and Answer Optimiser
+- Editorial Integrity QA
+- Publishing Operator
+- Growth Intelligence Analyst
 
 ## Normal operating loop
 
-1. The board or manager creates a scoped issue with owner, expected output, acceptance criteria, and dependencies.
+1. The board or Agency Director creates a scoped issue with owner, expected output, acceptance criteria, and dependencies.
 2. Paperclip queues a wake; the global and per-agent caps admit it.
 3. Hermes works through its role and tool boundaries and records evidence.
 4. Downstream issues release automatically when blockers complete.
-5. QA tests independently; the manager integrates findings and makes the release recommendation.
+5. Editorial Integrity QA tests independently; the Agency Director integrates findings and makes the release recommendation.
 6. The board resolves decisions or approvals. Codex supervises platform health and intervenes only when the control plane needs administration or recovery.
 
 ## Failure behavior

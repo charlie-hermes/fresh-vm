@@ -1,19 +1,32 @@
 #!/bin/sh
 set -eu
 
-case "${1:-}" in
+mode=${1:-}
+session=${2:-}
+case "$mode" in
   delegation)
     pattern='^[[:space:]]*(\[done\][[:space:]]*)?┊[[:space:]]+🔀[[:space:]]+delegate[[:space:]]+2x:.*[[:space:]][[:space:]][0-9]+\.[0-9]s[[:space:]]*$'
     ;;
   web-search)
     pattern='^[[:space:]]*(\[done\][[:space:]]*)?┊[[:space:]]+(🔍[[:space:]]+search|⚡[[:space:]]+web_searc)[[:space:]].*[[:space:]][[:space:]][0-9]+\.[0-9]s[[:space:]]*$'
     ;;
+  web-search-log)
+    case "$session" in
+      ????????_??????_??????) ;;
+      *) echo "valid Hermes session id required" >&2; exit 64 ;;
+    esac
+    case "$session" in
+      *[!A-Za-z0-9_]*) echo "valid Hermes session id required" >&2; exit 64 ;;
+    esac
+    pattern="^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} INFO \\[$session\\] agent\\.tool_executor: tool web_search(_hermes)? completed \\([0-9]+\\.[0-9]+s, [0-9]+ chars\\)$"
+    ;;
   *)
-    echo "usage: paperclip-tool-completion-check {delegation|web-search}" >&2
+    echo "usage: paperclip-tool-completion-check {delegation|web-search|web-search-log SESSION}" >&2
     exit 64
     ;;
 esac
 
-# Hermes adds every failure indicator after the duration. Requiring the
-# duration at end-of-line excludes [error], [exit N], and detailed failures.
+# Rendered output requires the duration at end-of-line, excluding [error],
+# [exit N], and detailed failures. Host-log mode requires Hermes' exact
+# successful tool-executor record bound to the current session id.
 LC_ALL=C.UTF-8 grep -Eq "$pattern"

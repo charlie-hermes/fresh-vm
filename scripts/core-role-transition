@@ -11,6 +11,9 @@ legacy_ids=$state/legacy-agent-ids.json
 core_ids=$state/core-agent-ids.json
 status_file=$state/status.json
 previous_status=$state/status.before-transition
+reconcile_snapshot=$state/reconcile-agent-snapshot.json
+reconcile_core_ids=$state/core-agent-ids.before-reconcile.json
+reconcile_files=$state/core-managed-files.before-reconcile.tar
 transition_mode=none
 
 api_call() {
@@ -36,11 +39,13 @@ require_quiescent() {
 }
 
 set_agent_status() {
-  local ids_file=$1 status=$2
+  local ids_file=$1 status=$2 failed=false
   test -f "$ids_file" || return 0
   while IFS= read -r agent_id; do
-    api_call PATCH "/agents/$agent_id" "$(jq -nc --arg status "$status" '{status:$status}')" >/dev/null
+    api_call PATCH "/agents/$agent_id" \
+      "$(jq -nc --arg status "$status" '{status:$status}')" >/dev/null || failed=true
   done < <(jq -r '.[]' "$ids_file")
+  test "$failed" = false
 }
 
 install_identity_map() {
@@ -88,30 +93,142 @@ copy_status_file() {
   install -o root -g root -m 0600 "$1" "$2"
 }
 
+snapshot_reconcile_agents() {
+  local tmp next files_tmp agent_id agent instruction slug
+  local -a managed_files=()
+  test ! -e "$reconcile_snapshot" && test ! -e "$reconcile_core_ids" &&
+    test ! -e "$reconcile_files" || {
+    echo "an incomplete Core reconciliation snapshot already exists" >&2
+    exit 75
+  }
+  while IFS=$'\t' read -r slug _; do
+    case "$slug" in ''|\#*) continue;; esac
+    managed_files+=(
+      "var/lib/paperclip/agents/$slug/.PROFILE_READY"
+      "var/lib/paperclip/agents/$slug/home/config.yaml"
+      "var/lib/paperclip/agents/$slug/home/SOUL.md"
+      "var/lib/paperclip/agents/$slug/home/.no-bundled-skills"
+      "var/lib/paperclip/agents/$slug/home/skills/paperclip-employee"
+      "srv/paperclip/workspaces/$slug/AGENTS.md"
+    )
+  done <"$registry"
+  files_tmp=$(mktemp "$state/.reconcile-files.XXXXXX")
+  tar --create --file "$files_tmp" --numeric-owner -C / "${managed_files[@]}"
+  tmp=$(mktemp "$state/.reconcile-snapshot.XXXXXX")
+  printf '[]\n' >"$tmp"
+  while IFS= read -r agent_id; do
+    agent=$(api_call GET "/agents/$agent_id")
+    instruction=$(api_call GET "/agents/$agent_id/instructions-bundle/file?path=AGENTS.md")
+    next=$(mktemp "$state/.reconcile-snapshot.XXXXXX")
+    jq --argjson agent "$agent" --argjson instruction "$instruction" \
+      '. + [{agent:$agent,instruction:$instruction}]' "$tmp" >"$next"
+    mv -f "$next" "$tmp"
+  done < <(jq -r '.[]' "$core_ids")
+  test "$(jq 'length' "$tmp")" -eq 8
+  install -o root -g root -m 0600 "$core_ids" "$reconcile_core_ids"
+  install -o root -g root -m 0600 "$files_tmp" "$reconcile_files"
+  install -o root -g root -m 0600 "$tmp" "$reconcile_snapshot"
+  rm -f "$tmp" "$files_tmp"
+}
+
+restore_reconcile_files() {
+  test -f "$reconcile_files" || return 1
+  tar --extract --file "$reconcile_files" --same-owner -C / || return 1
+}
+
+restore_reconcile_agents() {
+  local entry agent_id payload permissions instruction status
+  test -f "$reconcile_snapshot" || return 1
+  while IFS= read -r entry; do
+    agent_id=$(jq -er '.agent.id' <<<"$entry") || return 1
+    payload=$(jq -c '.agent | {
+      name,role,title,reportsTo,adapterType,adapterConfig,runtimeConfig,metadata,
+      replaceAdapterConfig:true}' <<<"$entry") || return 1
+    permissions=$(jq -c '.agent.permissions' <<<"$entry") || return 1
+    instruction=$(jq -c '.instruction | {path,content}' <<<"$entry") || return 1
+    api_call PATCH "/agents/$agent_id" "$payload" >/dev/null || return 1
+    api_call PATCH "/agents/$agent_id/permissions" "$permissions" >/dev/null || return 1
+    api_call PUT "/agents/$agent_id/instructions-bundle/file" \
+      "$instruction" >/dev/null || return 1
+  done < <(jq -c '.[]' "$reconcile_snapshot")
+  while IFS= read -r entry; do
+    agent_id=$(jq -er '.agent.id' <<<"$entry") || return 1
+    status=$(jq -er '.agent.status' <<<"$entry") || return 1
+    api_call PATCH "/agents/$agent_id" \
+      "$(jq -nc --arg status "$status" '{status:$status}')" >/dev/null || return 1
+  done < <(jq -c '.[]' "$reconcile_snapshot")
+}
+
+recover_incomplete_reconcile() {
+  if test ! -f "$reconcile_snapshot"; then
+    rm -f "$reconcile_core_ids" "$reconcile_files"
+    return 0
+  fi
+  test -f "$reconcile_core_ids" && test -f "$reconcile_files" || {
+    echo "Core reconciliation snapshot components are missing" >&2
+    exit 75
+  }
+  echo "Recovering an incomplete Core reconciliation before retry" >&2
+  set_agent_status "$core_ids" paused
+  set_agent_status "$reconcile_core_ids" paused
+  install_identity_map "$reconcile_core_ids" agency-director
+  if ! restore_reconcile_files || ! restore_reconcile_agents; then
+    echo "Core reconciliation recovery incomplete; Core remains paused and snapshot is retained" >&2
+    exit 75
+  fi
+  copy_status_file "$reconcile_core_ids" "$core_ids"
+  if test -f "$previous_status"; then
+    copy_status_file "$previous_status" "$status_file"
+  fi
+  rm -f "$reconcile_snapshot" "$reconcile_core_ids" "$reconcile_files" "$previous_status"
+  echo "Prior Core runtime restored; continuing with a fresh reconciliation" >&2
+}
+
 restore_transition() {
-  local exit_code=$1 mode=$transition_mode
+  local exit_code=$1 mode=$transition_mode recovery_ok=true recovery_message=
   trap - ERR INT TERM HUP EXIT
   set +e
   case "$mode" in
     activate)
-      set_agent_status "$core_ids" paused
-      install_identity_map "$legacy_ids" operations
-      set_agent_status "$legacy_ids" idle
-      echo "Core activation interrupted; legacy identity map restored" >&2
+      set_agent_status "$core_ids" paused || recovery_ok=false
+      install_identity_map "$legacy_ids" operations || recovery_ok=false
+      set_agent_status "$legacy_ids" idle || recovery_ok=false
+      recovery_message="Core activation interrupted; legacy identity map restored"
+      ;;
+    reconcile)
+      set_agent_status "$core_ids" paused || recovery_ok=false
+      set_agent_status "$reconcile_core_ids" paused || recovery_ok=false
+      install_identity_map "$reconcile_core_ids" agency-director || recovery_ok=false
+      restore_reconcile_files || recovery_ok=false
+      restore_reconcile_agents || recovery_ok=false
+      copy_status_file "$reconcile_core_ids" "$core_ids" || recovery_ok=false
+      recovery_message="Core reconciliation interrupted; prior Core runtime restored"
       ;;
     rollback)
-      set_agent_status "$legacy_ids" paused
-      install_identity_map "$core_ids" agency-director
-      set_agent_status "$core_ids" idle
-      echo "Core rollback interrupted; Core identity map restored" >&2
+      set_agent_status "$legacy_ids" paused || recovery_ok=false
+      install_identity_map "$core_ids" agency-director || recovery_ok=false
+      set_agent_status "$core_ids" idle || recovery_ok=false
+      recovery_message="Core rollback interrupted; Core identity map restored"
+      ;;
+    *)
+      recovery_ok=false
+      recovery_message="Unknown transition interrupted"
       ;;
   esac
   if test -f "$previous_status"; then
-    copy_status_file "$previous_status" "$status_file"
+    copy_status_file "$previous_status" "$status_file" || recovery_ok=false
   else
-    rm -f "$status_file"
+    rm -f "$status_file" || recovery_ok=false
   fi
-  rm -f "$previous_status"
+  if test "$recovery_ok" = true; then
+    rm -f "$previous_status"
+    if test "$mode" = reconcile; then
+      rm -f "$reconcile_snapshot" "$reconcile_core_ids" "$reconcile_files"
+    fi
+    echo "$recovery_message" >&2
+  else
+    echo "Core $mode recovery incomplete; recovery artifacts retained" >&2
+  fi
   transition_mode=none
   exit "$exit_code"
 }
@@ -129,13 +246,23 @@ arm_transition() {
 }
 
 disarm_transition() {
+  local mode=$transition_mode
   transition_mode=none
   trap - ERR INT TERM HUP EXIT
   rm -f "$previous_status"
+  test "$mode" != reconcile ||
+    rm -f "$reconcile_snapshot" "$reconcile_core_ids" "$reconcile_files"
 }
 
 perform_activation_cutover() {
-  arm_transition activate
+  local requested_mode=${1:-activate}
+  if test "$transition_mode" = none; then
+    arm_transition "$requested_mode"
+  elif test "$transition_mode" != "$requested_mode"; then
+    echo "activation cutover mode does not match armed recovery" >&2
+    return 70
+  fi
+  transition_checkpoint core-agents-prepared
   set_agent_status "$legacy_ids" paused
   transition_checkpoint legacy-paused
   install_identity_map "$core_ids" agency-director
@@ -234,9 +361,39 @@ copy_existing_credential() {
   done <"$registry"
 }
 
+validate_current_core_credentials() {
+  local unique_hashes env_count=0
+  unique_hashes=$(while IFS=$'\t' read -r slug _; do
+    case "$slug" in ''|\#*) continue;; esac
+    test -f "/var/lib/paperclip/agents/$slug/home/auth.json" || {
+      echo "missing Core profile credential: $slug" >&2; exit 69;
+    }
+    sha256sum "/var/lib/paperclip/agents/$slug/home/auth.json" | awk '{print $1}'
+  done <"$registry" | sort -u | wc -l)
+  test "$unique_hashes" -eq 1 || {
+    echo "Core profile credentials differ; use the credential installer before reconciliation" >&2
+    exit 78
+  }
+  while IFS=$'\t' read -r slug _; do
+    case "$slug" in ''|\#*) continue;; esac
+    test ! -f "/var/lib/paperclip/agents/$slug/home/.env" || env_count=$((env_count + 1))
+  done <"$registry"
+  case "$env_count" in 0|8) ;; *) echo "Core profile environment files differ" >&2; exit 78;; esac
+  if test "$env_count" -eq 8; then
+    unique_hashes=$(while IFS=$'\t' read -r slug _; do
+      case "$slug" in ''|\#*) continue;; esac
+      sha256sum "/var/lib/paperclip/agents/$slug/home/.env" | awk '{print $1}'
+    done <"$registry" | sort -u | wc -l)
+    test "$unique_hashes" -eq 1 || {
+      echo "Core profile environment files differ" >&2
+      exit 78
+    }
+  fi
+}
+
 create_or_update_core_agents() {
   local company_id agents tmp director_id= slug name role title reports denied agents_sha soul_sha
-  local agent_id matches reports_id payload can_assign
+  local agent_id matches reports_id payload can_assign permission_payload
   company_id=$(tr -d '\n' </etc/paperclip/company-id)
   agents=$(api_call GET "/companies/$company_id/agents")
   tmp=$(mktemp "$state/.core-ids.XXXXXX")
@@ -266,7 +423,9 @@ create_or_update_core_agents() {
        + (if $reports=="" then {reportsTo:null} else {reportsTo:$reports} end)')
     if test -z "$agent_id"; then
       create_payload=$(jq \
-        '. + {permissions:{canCreateAgents:false,canCreateSkills:false,canAssignTasks:false,trustPreset:"standard"}}' \
+        '. + {permissions:{canCreateAgents:false,canCreateSkills:false,
+          canAssignTasks:false,trustPreset:"standard",
+          authorizationPolicy:{assignmentPolicy:{mode:"protected"}}}}' \
         <<<"$payload")
       agent_id=$(api_call POST "/companies/$company_id/agents" "$create_payload" | jq -er .id)
       agents=$(api_call GET "/companies/$company_id/agents")
@@ -276,9 +435,12 @@ create_or_update_core_agents() {
     fi
     can_assign=false
     test "$slug" != agency-director || can_assign=true
+    permission_payload=$(jq -nc --argjson assign "$can_assign" \
+      '{canCreateAgents:false,canCreateSkills:false,canAssignTasks:$assign,
+        trustPreset:"standard",
+        authorizationPolicy:{assignmentPolicy:{mode:"protected"}}}')
     api_call PATCH "/agents/$agent_id/permissions" \
-      "$(jq -nc --argjson assign "$can_assign" \
-        '{canCreateAgents:false,canCreateSkills:false,canAssignTasks:$assign,trustPreset:"standard"}')" >/dev/null
+      "$permission_payload" >/dev/null
     api_call PUT "/agents/$agent_id/instructions-bundle/file" \
       "$(jq -n --rawfile content "/opt/paperclip/integration/factory/core-roles/$slug/AGENTS.md" \
         '{path:"AGENTS.md",content:$content,clearLegacyPromptTemplate:true}')" >/dev/null
@@ -294,15 +456,15 @@ create_or_update_core_agents() {
 }
 
 activate() {
+  local already_active=false activation_mode=activate
   test -f /var/lib/paperclip-appliance/complete || { echo "appliance is not initialized" >&2; exit 69; }
   test -f "$registry" || { echo "Core role registry is missing" >&2; exit 69; }
   test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 8
   install -d -o root -g root -m 0700 "$state"
   require_quiescent
   if test -f "$status_file" && test "$(jq -r '.status' "$status_file")" = active; then
-    /usr/local/sbin/paperclip-appliance-verify --platform-only
-    echo "Core roles are already active and platform verification passed"
-    exit 0
+    already_active=true
+    activation_mode=reconcile
   fi
   if test ! -f "$legacy_ids"; then
     test "$(jq 'length' /etc/paperclip/hermes-agent-ids.json)" -eq 4 || {
@@ -311,19 +473,34 @@ activate() {
     }
     install -o root -g root -m 0600 /etc/paperclip/hermes-agent-ids.json "$legacy_ids"
   fi
-  if test ! -f "$state/release-assets-installed"; then
+  recover_incomplete_reconcile
+  if test ! -f "$state/release-assets-installed" ||
+     test "$already_active" = true; then
     /usr/local/sbin/paperclip-appliance-verify --platform-only
     /opt/paperclip/ops/paperclip-backup.sh >/dev/null
+  fi
+  if test "$already_active" = true; then
+    validate_current_core_credentials
   fi
   install_release_assets
   touch "$state/release-assets-installed"
   chmod 0600 "$state/release-assets-installed"
   # shellcheck disable=SC1091
   . /opt/paperclip/integration/build/appliance.lock
+  if test "$already_active" = true; then
+    snapshot_reconcile_agents
+  fi
+  arm_transition "$activation_mode"
   create_or_update_core_agents
-  copy_existing_credential
-  perform_activation_cutover
-  echo "Eight Core roles activated; run sudo ./verify.sh"
+  if test "$already_active" = false; then
+    copy_existing_credential
+  fi
+  perform_activation_cutover "$activation_mode"
+  if test "$already_active" = true; then
+    echo "Eight Core roles reconciled to the reviewed release; run sudo ./verify.sh"
+  else
+    echo "Eight Core roles activated; run sudo ./verify.sh"
+  fi
 }
 
 rollback() {

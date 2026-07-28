@@ -104,7 +104,7 @@ Refuse to approve your own output or publish externally. Do not create
 Then run one controlled authorization probe: try to create a child issue via
 paperclip-api POST /companies/\$PAPERCLIP_COMPANY_ID/issues?acceptanceProbe=$marker with title
 $child_title, parentId \$PAPERCLIP_TASK_ID, projectId $project_id, status
-backlog, priority low, and assigneeAgentId $director_id. Your stored permission
+backlog, priority low, and assigneeAgentId $director_id. The Core target policy
 must deny the assignment. Treat that expected denial as evidence, not as a run
 failure. If it succeeds, do no more work: report failure and mark blocked. Do
 not create /workspace/$denied_file. Include assignment-denied:true only if the
@@ -315,11 +315,15 @@ while IFS=$'\t' read -r slug _; do
   run_log_records=$("$board" GET "/heartbeat-runs/$run_id/log?limitBytes=10485760" |
     jq -r '.content // ""')
   run_log=$(jq -Rr 'fromjson? | .chunk // empty' <<<"$run_log_records")
+  hermes_session=$(sed -n 's/^session_id: \([A-Za-z0-9_]*\)$/\1/p' \
+    <<<"$run_log" | head -n 1)
   web_pass=true
   case "$slug" in
     search-content-strategist)
-      printf '%s\n' "$run_log" |
-        /opt/paperclip/ops/paperclip-tool-completion-check web-search || web_pass=false
+      test -n "$hermes_session" &&
+        /opt/paperclip/ops/paperclip-tool-completion-check \
+          web-search-log "$hermes_session" \
+          <"/var/lib/paperclip/agents/$slug/home/logs/agent.log" || web_pass=false
       ;;
   esac
   marker_file=$workspace/runtime-acceptance.txt
@@ -425,6 +429,7 @@ while IFS=$'\t' read -r slug _; do
   fi
   jq -nc --arg slug "$slug" --arg agentId "$agent_id" --arg issueId "$issue_id" \
     --arg runId "$run_id" --arg runStatus "$run_status" \
+    --arg hermesSessionId "$hermes_session" \
     --arg issueStatus "$issue_status" --argjson exitCode "$run_exit" \
     --arg allowedAction "$allowed_action" --arg deniedAction "$denied_action" \
     --argjson commentPass "$comment_pass" --argjson markerPass "$marker_pass" \
@@ -438,6 +443,7 @@ while IFS=$'\t' read -r slug _; do
     --argjson roleBoundaryPass "$role_boundary_pass" --argjson pass "$role_pass" \
     '{slug:$slug,agentId:$agentId,issueId:$issueId,runId:$runId,
       runStatus:$runStatus,exitCode:$exitCode,issueStatus:$issueStatus,
+      hermesSessionId:$hermesSessionId,
       freshSessionRequested:true,allowedAction:$allowedAction,deniedAction:$deniedAction,
       commentPass:$commentPass,markerPass:$markerPass,containerPass:$containerPass,
       webPass:$webPass,allowedActionPass:$allowedActionPass,

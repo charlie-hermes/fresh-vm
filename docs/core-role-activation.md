@@ -23,10 +23,12 @@ hashes.
 | `publishing-operator` | `devops` | Agency Director | sandbox publication/reconciliation only |
 | `growth-intelligence-analyst` | `researcher` | Agency Director | approved observation and analysis |
 
-All specialists have `canAssignTasks=false`, `canCreateAgents=false`, and
-`canCreateSkills=false`. The Agency Director has only `canAssignTasks=true`.
-Every role has `maxConcurrentRuns=1`; the appliance admits at most two Hermes
-runs across the VM.
+Every Core employee target uses Paperclip's protected assignment policy. All
+specialists have no assignment grant, `canAssignTasks=false`,
+`canCreateAgents=false`, and `canCreateSkills=false`; the Agency Director alone
+has the explicit assignment grant represented by `canAssignTasks=true`. Every
+role has `maxConcurrentRuns=1`; the appliance admits at most two Hermes runs
+across the VM.
 
 ## Existing-appliance activation
 
@@ -56,8 +58,15 @@ Activation is a reviewed release operation, not normal employee work.
 transition status after `ERR`, `HUP`, `INT`, or `TERM` at every recoverable
 cutover checkpoint. `SIGKILL` cannot be trapped; after a killed transition,
 wait for all runs and containers to stop, then rerun the same `activate` or
-`rollback` command. The command is idempotent and re-establishes the intended
-state before verification.
+`rollback` command. Re-running `activate` against an active Core runtime first
+verifies the installed platform, creates an encrypted backup, and validates the
+eight current Core credential copies without replacing them from the retained
+legacy profiles. It then snapshots the current Core Paperclip configuration,
+permissions, managed instructions, status, identity map, and managed profile
+files before arming the distinct `reconcile` recovery mode and making any live
+employee mutation. A recoverable
+failure restores that snapshot, the Core identity map, and the prior transition
+status; a later retry also restores a snapshot left by `SIGKILL` before retrying.
 
 Do not report activation complete until all six release lines pass.
 
@@ -78,13 +87,16 @@ must complete one allowed action from a deterministic fixture, explicitly
 refuse its nearest denied action, leave the prohibited artifact absent, create
 and read a mutually exclusive workspace sentinel inside its Docker identity,
 confirm Docker sockets are absent, and return an attributed Paperclip comment.
-The Strategist must also produce successful web-search tool-completion evidence.
+The Strategist must also produce successful web-search tool-completion evidence
+from the host-owned Hermes agent log, bound to the session identifier retained
+in that Paperclip run log.
 The Director must create exactly one scoped backlog child assigned to the Brief
 Steward. The Steward must attempt the inverse assignment through a URL carrying
 a unique per-run probe token; host-owned Paperclip service journal evidence must
 show that exact POST returned 403, and the Steward issue must have zero children
-of any title. Together these prove both values of `canAssignTasks` without
-trusting agent-authored claims. Host inspection validates the allowed artifacts,
+of any title. Together these prove the Director's explicit grant and the
+specialist denial against protected Core targets without trusting agent-authored
+claims. Host inspection validates the allowed artifacts,
 denied side effects, the pre/post checksum of every immutable input and sentinel,
 every mount, and that the global scheduler ran exactly two concurrently while
 queueing the remainder. The retained evidence records `allowedAction`,

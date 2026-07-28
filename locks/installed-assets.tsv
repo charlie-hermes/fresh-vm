@@ -4,7 +4,7 @@ e4af246514861ed58c7ef7658003061fe264d406ca1110764b4cf9d967bad473	files/ops/paper
 c4054d3791e8d071eff14dce6374d92a7659a4b3b86e4585d12c886fa986248d	files/ops/paperclip-checkout	/opt/paperclip/ops/paperclip-checkout
 86d9969c84c2dd5417f8a1ac518095955b1b64c4c163ab501fe1fc43f0e17077	files/ops/paperclip-emergency-control	/opt/paperclip/ops/paperclip-emergency-control
 94b8ff8dc5585d487e224dd56e4d24a5b70aca01c71d487c69d600cdd21df67a	files/ops/paperclip-health.sh	/opt/paperclip/ops/paperclip-health.sh
-4b3bd4a0a235db1ac12a660c511e14914293cbb4cd44dfd0609f2abd57341a3c	files/ops/paperclip-http-denial-check	/opt/paperclip/ops/paperclip-http-denial-check
+09ac8a59bb324b4caec335bdc9ebc0f9b3fca8513cc6ecae2d34879301a8b090	files/ops/paperclip-http-denial-check	/opt/paperclip/ops/paperclip-http-denial-check
 6be93b31fd592a71af0f90eccc6bfd82be14fc705b3359b92bf9859e007b3615	files/ops/paperclip-integration-regression	/opt/paperclip/ops/paperclip-integration-regression
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458	files/ops/paperclip-issue-update	/opt/paperclip/ops/paperclip-issue-update
 8304037e6e1ebfe9522564b33cbc66ceaa8082af6a40e118f435ae0b4761a657	files/ops/paperclip-network-policy	/opt/paperclip/ops/paperclip-network-policy

@@ -61,28 +61,58 @@ Off-host backup is mandatory for production readiness. Configure
 `verified: true` and `recoveryKeyEscrowed: true`. Root, local, bind, temporary,
 or same-source mounts do not satisfy this requirement.
 
-## Changing the four-agent factory
+## Changing or upgrading the eight-role factory
 
-The released appliance intentionally verifies exactly four profiles. Adding or
-removing an employee is a factory change, not an ad-hoc production operation:
-update the initializer, credential installer, backup exclusions, functional
-acceptance, and exact-count verification together in a reviewed release.
+The released appliance verifies exactly eight active Core profiles. Adding,
+removing, renaming, or re-authorising a role is a factory change, not an ad-hoc
+production operation: update the registry, initializer, profile builder,
+credential installer, backup documentation, functional acceptance, exact-count
+verification, and installed-asset locks together in a reviewed release.
 
-1. Allocate a unique `/var/lib/paperclip/agents/<agent>/home` and `/srv/paperclip/workspaces/<agent>` owned by `paperclip:paperclip`, mode 0750.
-2. Initialize a separate Hermes configuration/credential set; do not share sessions, memory, state DB, sandbox home, or credentials.
-3. Confirm the workspace remains below `/srv/paperclip/workspaces`.
-4. Confirm the dynamic backup includes the home/workspace and still excludes
-   its credential and log paths.
-5. Set adapter `env.HERMES_HOME` to that unique absolute home and `cwd` to the unique workspace.
-6. Reload/restart Paperclip, run adapter test, then run mutually exclusive workspace sentinels and inspect `hermes-profile` labels/mounts.
-7. Never reuse a `HERMES_HOME` across agents.
+For an appliance running the prior four-profile release, use only the reviewed
+transition command from the release checkout:
+
+```sh
+sudo ./scripts/core-role-transition activate
+sudo ./verify.sh
+```
+
+The transition refuses live runs/containers, makes an encrypted backup,
+preserves the legacy identity map, installs checksum-locked assets, creates and
+pauses the eight new profiles while they are prepared, verifies legacy
+credential copies are identical without printing them, then atomically cuts
+over the active identity map. Legacy employees and profile data are paused and
+retained for rollback; they are not deleted.
+
+A runtime-only rollback is available after confirming the employee plane is
+quiescent:
+
+```sh
+sudo /usr/local/sbin/paperclip-core-role-transition rollback
+```
+
+Rollback pauses the Core roles and restores the legacy identity map. Then deploy
+the prior reviewed repository commit so installed verification assets match the
+restored runtime. Do not claim production readiness while code and runtime are
+on different releases.
+
+For every future factory change:
+
+1. Allocate a unique `/var/lib/paperclip/agents/<role>/home` and `/srv/paperclip/workspaces/<role>` owned by `paperclip:paperclip`.
+2. Install the checksum-bound `SOUL.md` in the home and `AGENTS.md` in the workspace; upload the same AGENTS bytes to Paperclip's managed bundle.
+3. Initialize a separate Hermes configuration/credential copy; never share sessions, memory, state DB, sandbox home, or writable credential files.
+4. Confirm the workspace remains below `/srv/paperclip/workspaces` and the dynamic backup includes it while excluding credentials/logs.
+5. Set adapter `env.HERMES_HOME` and `cwd` to the exact unique paths.
+6. Reset the runtime session, prove both context files loaded through the pinned Hermes prompt builder, then run a real Paperclip assignment.
+7. Verify every denied toolset, workspace sentinel, container mount, socket absence, role comment, and global concurrency evidence.
+8. Never reuse a `HERMES_HOME` across agents.
 
 ## MCP
 
 The local acceptance echo server proved stdio MCP, then was unregistered. Production intentionally has no MCP server configured. Add only reviewed servers with:
 
 ```sh
-sudo -u paperclip env HOME=/var/lib/paperclip HERMES_HOME=/var/lib/paperclip/agents/operations/home /opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9/venv/bin/hermes mcp add ...
+sudo -u paperclip env HOME=/var/lib/paperclip HERMES_HOME=/var/lib/paperclip/agents/agency-director/home /opt/hermes-agent/7de554277de632364c74fcf8641daa58a9a977d9/venv/bin/hermes mcp add ...
 ```
 
 Re-test boundaries and credentials after changes.

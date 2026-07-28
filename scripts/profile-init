@@ -8,7 +8,10 @@ slug=${1:-}
 role=${2:-}
 case "$slug" in ''|*[!a-z0-9-]*) echo "invalid profile slug" >&2; exit 64;; esac
 case "$role" in
-  operations-manager|research-strategy|production-specialist|qa-reviewer) ;;
+  operations-manager|research-strategy|production-specialist|qa-reviewer|\
+agency-director|brand-brief-steward|search-content-strategist|content-producer|\
+search-answer-optimiser|editorial-integrity-qa|publishing-operator|\
+growth-intelligence-analyst) ;;
   *) echo "invalid role pack" >&2; exit 64;;
 esac
 
@@ -17,38 +20,74 @@ profile_root=/var/lib/paperclip/agents/$slug
 home=$profile_root/home
 workspace=/srv/paperclip/workspaces/$slug
 ready=$profile_root/.PROFILE_READY
+role_is_core=false
+case "$role" in
+  agency-director|brand-brief-steward|search-content-strategist|content-producer|\
+search-answer-optimiser|editorial-integrity-qa|publishing-operator|\
+growth-intelligence-analyst) role_is_core=true ;;
+esac
+
+core_record=
+if "$role_is_core"; then
+  core_record=$(awk -F '\t' -v role="$role" '$1==role {print}' \
+    "$factory/core-roles.tsv")
+  test -n "$core_record" &&
+    test "$(printf '%s\n' "$core_record" | wc -l)" -eq 1 ||
+      { echo "missing or duplicate Core role registry entry: $role" >&2; exit 1; }
+fi
 
 # Profile creation is deliberately convergent: an interrupted run may leave any
 # subset of these paths behind. The marker is written only after every required
 # file has been installed.
 if test -f "$ready"; then
-  test -f "$home/config.yaml" &&
-    test -f "$home/skills/$role/SKILL.md" &&
-    test -f "$home/skills/paperclip-employee/SKILL.md" &&
-    test -d "$workspace" ||
-      { echo "completed profile is inconsistent: $profile_root" >&2; exit 1; }
-  echo "profile already complete: $slug"
-  exit 0
+  test "$(cat "$ready")" = "$role" ||
+    { echo "profile slug already belongs to another role: $slug" >&2; exit 1; }
+  if ! "$role_is_core"; then
+    test -f "$home/config.yaml" &&
+      test -f "$home/skills/paperclip-employee/SKILL.md" &&
+      test -f "$home/skills/$role/SKILL.md" && test -d "$workspace" ||
+        { echo "completed legacy profile is inconsistent: $profile_root" >&2; exit 1; }
+    echo "profile already complete: $slug"
+    exit 0
+  fi
+  echo "refreshing managed Core profile: $slug"
 fi
 install -d -o paperclip -g paperclip -m 0700 \
   "$home" "$home/skills" "$home/skills/paperclip-employee/scripts" \
-  "$home/skills/$role" "$home/logs" "$home/sessions" "$home/memories" \
+  "$home/logs" "$home/sessions" "$home/memories" \
   "$home/checkpoints" "$home/sandboxes" "$home/cache" "$workspace"
 install -o paperclip -g paperclip -m 0600 "$factory/config.yaml.template" "$home/config.yaml"
 sed -i "s/__PROFILE_SLUG__/$slug/g" "$home/config.yaml"
 
-case "$role" in
-  operations-manager) remove_tools=(code_execution image_gen vision) ;;
-  research-strategy) remove_tools=(code_execution delegation image_gen) ;;
-  production-specialist) remove_tools=(delegation session_search) ;;
-  qa-reviewer) remove_tools=(delegation image_gen) ;;
-esac
+if "$role_is_core"; then
+  IFS=$'\t' read -r _ _ _ _ _ denied_tools agents_sha soul_sha <<<"$core_record"
+  IFS=, read -r -a remove_tools <<<"$denied_tools"
+else
+  install -d -o paperclip -g paperclip -m 0700 "$home/skills/$role"
+  case "$role" in
+    operations-manager) remove_tools=(code_execution image_gen vision) ;;
+    research-strategy) remove_tools=(code_execution delegation image_gen) ;;
+    production-specialist) remove_tools=(delegation session_search) ;;
+    qa-reviewer) remove_tools=(delegation image_gen) ;;
+  esac
+fi
 for tool in "${remove_tools[@]}"; do
   sed -i "/^platform_toolsets:/,/^  telegram:/ {/^    - $tool$/d;}" "$home/config.yaml"
 done
 
-install -o paperclip -g paperclip -m 0600 \
-  "$factory/roles/$role/SKILL.md" "$home/skills/$role/SKILL.md"
+if "$role_is_core"; then
+  test "$(sha256sum "$factory/core-roles/$role/AGENTS.md" | awk '{print $1}')" = \
+    "$agents_sha" || { echo "AGENTS.md checksum mismatch: $role" >&2; exit 1; }
+  test "$(sha256sum "$factory/core-roles/$role/SOUL.md" | awk '{print $1}')" = \
+    "$soul_sha" || { echo "SOUL.md checksum mismatch: $role" >&2; exit 1; }
+  install -o paperclip -g paperclip -m 0600 \
+    "$factory/core-roles/$role/AGENTS.md" "$workspace/AGENTS.md"
+  install -o paperclip -g paperclip -m 0600 \
+    "$factory/core-roles/$role/SOUL.md" "$home/SOUL.md"
+else
+  install -o paperclip -g paperclip -m 0600 \
+    "$factory/roles/$role/SKILL.md" "$home/skills/$role/SKILL.md"
+fi
 install -o paperclip -g paperclip -m 0600 \
   "$factory/skills/paperclip-employee/SKILL.md" \
   "$home/skills/paperclip-employee/SKILL.md"

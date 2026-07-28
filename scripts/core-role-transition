@@ -1,0 +1,355 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+state=/var/lib/paperclip-appliance/core-role-transition
+board=/opt/paperclip/ops/paperclip-board-api
+registry=$repo/files/factory/core-roles.tsv
+legacy_ids=$state/legacy-agent-ids.json
+core_ids=$state/core-agent-ids.json
+status_file=$state/status.json
+previous_status=$state/status.before-transition
+transition_mode=none
+
+api_call() {
+  method=$1
+  path=$2
+  data=${3:-}
+  if test -n "$data"; then
+    printf '%s' "$data" | "$board" "$method" "$path" -
+  else
+    "$board" "$method" "$path"
+  fi
+}
+
+require_quiescent() {
+  local company_id live containers
+  company_id=$(tr -d '\n' </etc/paperclip/company-id)
+  live=$(api_call GET "/companies/$company_id/live-runs" | jq 'length')
+  containers=$(docker ps -q --filter label=hermes-agent=1 | wc -l)
+  test "$live" -eq 0 && test "$containers" -eq 0 || {
+    echo "Core role transition requires zero live runs and zero Hermes containers" >&2
+    exit 75
+  }
+}
+
+set_agent_status() {
+  local ids_file=$1 status=$2
+  test -f "$ids_file" || return 0
+  while IFS= read -r agent_id; do
+    api_call PATCH "/agents/$agent_id" "$(jq -nc --arg status "$status" '{status:$status}')" >/dev/null
+  done < <(jq -r '.[]' "$ids_file")
+}
+
+install_identity_map() {
+  local ids_file=$1 leader_key=$2
+  install -o root -g root -m 0600 "$ids_file" /etc/paperclip/hermes-agent-ids.json
+  jq -er --arg key "$leader_key" '.[$key]' "$ids_file" > /etc/paperclip/hermes-agent-id
+  chmod 0600 /etc/paperclip/hermes-agent-id
+}
+
+reset_core_sessions() {
+  while IFS= read -r agent_id; do
+    api_call POST "/agents/$agent_id/runtime-state/reset-session" '{}' >/dev/null
+  done < <(jq -r '.[]' "$core_ids")
+}
+
+write_activation_status() {
+  local tmp
+  tmp=$(mktemp "$state/.status.XXXXXX")
+  jq -n --arg activatedAt "$(date -u +%FT%TZ)" \
+    --arg sourceCommit "$(git -C "$repo" rev-parse HEAD)" \
+    '{status:"active",activatedAt:$activatedAt,sourceCommit:$sourceCommit}' >"$tmp"
+  install -o root -g root -m 0600 "$tmp" "$status_file"
+  rm -f "$tmp"
+}
+
+write_rollback_status() {
+  local tmp
+  tmp=$(mktemp "$state/.status.XXXXXX")
+  jq -n --arg rolledBackAt "$(date -u +%FT%TZ)" \
+    '{status:"rolled_back",rolledBackAt:$rolledBackAt,
+      note:"Deploy the prior reviewed appliance commit to restore matching verification assets."}' >"$tmp"
+  install -o root -g root -m 0600 "$tmp" "$status_file"
+  rm -f "$tmp"
+}
+
+clear_functional_evidence() {
+  rm -f /var/lib/paperclip/acceptance-evidence/functional-acceptance.json
+}
+
+# Tests override this no-op to inject a normal failure or signal after each
+# individually recoverable cutover step.
+transition_checkpoint() { :; }
+
+copy_status_file() {
+  install -o root -g root -m 0600 "$1" "$2"
+}
+
+restore_transition() {
+  local exit_code=$1 mode=$transition_mode
+  trap - ERR INT TERM HUP EXIT
+  set +e
+  case "$mode" in
+    activate)
+      set_agent_status "$core_ids" paused
+      install_identity_map "$legacy_ids" operations
+      set_agent_status "$legacy_ids" idle
+      echo "Core activation interrupted; legacy identity map restored" >&2
+      ;;
+    rollback)
+      set_agent_status "$legacy_ids" paused
+      install_identity_map "$core_ids" agency-director
+      set_agent_status "$core_ids" idle
+      echo "Core rollback interrupted; Core identity map restored" >&2
+      ;;
+  esac
+  if test -f "$previous_status"; then
+    copy_status_file "$previous_status" "$status_file"
+  else
+    rm -f "$status_file"
+  fi
+  rm -f "$previous_status"
+  transition_mode=none
+  exit "$exit_code"
+}
+
+arm_transition() {
+  transition_mode=$1
+  rm -f "$previous_status"
+  test ! -f "$status_file" ||
+    copy_status_file "$status_file" "$previous_status"
+  trap 'restore_transition $?' ERR
+  trap 'restore_transition 129' HUP
+  trap 'restore_transition 130' INT
+  trap 'restore_transition 143' TERM
+  trap 'restore_transition $?' EXIT
+}
+
+disarm_transition() {
+  transition_mode=none
+  trap - ERR INT TERM HUP EXIT
+  rm -f "$previous_status"
+}
+
+perform_activation_cutover() {
+  arm_transition activate
+  set_agent_status "$legacy_ids" paused
+  transition_checkpoint legacy-paused
+  install_identity_map "$core_ids" agency-director
+  transition_checkpoint core-map-installed
+  set_agent_status "$core_ids" idle
+  transition_checkpoint core-resumed
+  reset_core_sessions
+  transition_checkpoint sessions-reset
+  write_activation_status
+  transition_checkpoint status-written
+  clear_functional_evidence
+  disarm_transition
+}
+
+perform_rollback_cutover() {
+  arm_transition rollback
+  set_agent_status "$core_ids" paused
+  transition_checkpoint core-paused
+  install_identity_map "$legacy_ids" operations
+  transition_checkpoint legacy-map-installed
+  set_agent_status "$legacy_ids" idle
+  transition_checkpoint legacy-resumed
+  write_rollback_status
+  transition_checkpoint rollback-status-written
+  clear_functional_evidence
+  disarm_transition
+}
+
+install_release_assets() {
+  test -f "$repo/MANIFEST.sha256"
+  (cd "$repo" && sha256sum --check --strict MANIFEST.sha256 >/dev/null)
+  install -d -o root -g root -m 0755 \
+    /opt/paperclip/integration/docs /opt/paperclip/integration/factory \
+    /opt/paperclip/integration/paperclip /opt/paperclip/integration/build \
+    /opt/paperclip/ops
+  cp -a "$repo/docs/." /opt/paperclip/integration/docs/
+  cp -a "$repo/files/factory/." /opt/paperclip/integration/factory/
+  cp -a "$repo/files/paperclip/." /opt/paperclip/integration/paperclip/
+  cp -a "$repo/appliance.lock" "$repo/locks" "$repo/overlays" \
+    /opt/paperclip/integration/build/
+  chown -R root:root /opt/paperclip/integration
+  find /opt/paperclip/integration -type d -exec chmod 0755 {} +
+  find /opt/paperclip/integration -type f -exec chmod 0644 {} +
+  find /opt/paperclip/integration/factory/skills -type f -path '*/scripts/*' \
+    -exec chmod 0755 {} +
+  for script in "$repo"/files/ops/*; do
+    install -o root -g root -m 0755 "$script" "/opt/paperclip/ops/$(basename "$script")"
+  done
+  install -o root -g root -m 0755 "$repo/files/bin/jq" /opt/paperclip/ops/jq
+  install -o root -g root -m 0755 "$repo/scripts/functional-acceptance.sh" \
+    /opt/paperclip/ops/functional-acceptance.sh
+  install -o root -g root -m 0755 "$repo/scripts/profile-init" \
+    /usr/local/sbin/paperclip-hermes-profile-init
+  install -o root -g root -m 0755 "$repo/scripts/credential-install" \
+    /usr/local/sbin/paperclip-hermes-credential-install
+  install -o root -g root -m 0755 "$repo/scripts/core-role-transition" \
+    /usr/local/sbin/paperclip-core-role-transition
+  install -o root -g root -m 0755 "$repo/scripts/runtime-bundle-verify" \
+    /opt/paperclip/ops/runtime-bundle-verify
+  install -o root -g root -m 0755 "$repo/verify.sh" \
+    /usr/local/sbin/paperclip-appliance-verify
+}
+
+copy_existing_credential() {
+  local source_home=/var/lib/paperclip/agents/operations/home
+  local unique_hashes env_count=0
+  unique_hashes=$(for slug in operations research production qa; do
+    test -f "/var/lib/paperclip/agents/$slug/home/auth.json" || exit 69
+    sha256sum "/var/lib/paperclip/agents/$slug/home/auth.json" | awk '{print $1}'
+  done | sort -u | wc -l)
+  test "$unique_hashes" -eq 1 || {
+    echo "legacy profile credentials differ; explicit credential seed required" >&2
+    exit 78
+  }
+  for slug in operations research production qa; do
+    test ! -f "/var/lib/paperclip/agents/$slug/home/.env" || env_count=$((env_count + 1))
+  done
+  case "$env_count" in 0|4) ;; *) echo "legacy profile environment files differ" >&2; exit 78;; esac
+  if test "$env_count" -eq 4; then
+    unique_hashes=$(for slug in operations research production qa; do
+      sha256sum "/var/lib/paperclip/agents/$slug/home/.env" | awk '{print $1}'
+    done | sort -u | wc -l)
+    test "$unique_hashes" -eq 1 || {
+      echo "legacy profile environment files differ" >&2
+      exit 78
+    }
+  fi
+  while IFS=$'\t' read -r slug _; do
+    case "$slug" in ''|\#*) continue;; esac
+    home=/var/lib/paperclip/agents/$slug/home
+    install -o paperclip -g paperclip -m 0600 "$source_home/auth.json" "$home/auth.json"
+    if test "$env_count" -eq 4; then
+      install -o paperclip -g paperclip -m 0600 "$source_home/.env" "$home/.env"
+    fi
+    rm -f -- "$home/CREDENTIAL_REQUIRED"
+  done <"$registry"
+}
+
+create_or_update_core_agents() {
+  local company_id agents tmp director_id= slug name role title reports denied agents_sha soul_sha
+  local agent_id matches reports_id payload can_assign
+  company_id=$(tr -d '\n' </etc/paperclip/company-id)
+  agents=$(api_call GET "/companies/$company_id/agents")
+  tmp=$(mktemp "$state/.core-ids.XXXXXX")
+  printf '{}\n' >"$tmp"
+  while IFS=$'\t' read -r slug name role title reports denied agents_sha soul_sha; do
+    case "$slug" in ''|\#*) continue;; esac
+    /usr/local/sbin/paperclip-hermes-profile-init "$slug" "$slug" >/dev/null
+    reports_id=
+    test "$reports" = - || reports_id=$director_id
+    matches=$(jq --arg name "$name" '[.[] | select(.name==$name)] | length' <<<"$agents")
+    test "$matches" -le 1 || { echo "duplicate Paperclip employee name: $name" >&2; exit 1; }
+    agent_id=$(jq -r --arg name "$name" '.[] | select(.name==$name) | .id' <<<"$agents")
+    payload=$(jq -nc --arg name "$name" --arg role "$role" --arg title "$title" \
+      --arg cwd "/srv/paperclip/workspaces/$slug" \
+      --arg home "/var/lib/paperclip/agents/$slug/home" \
+      --arg hermesCommand "/opt/hermes-agent/$HERMES_COMMIT/venv/bin/hermes" \
+      --arg reports "$reports_id" --arg roleId "$slug" \
+      '{name:$name,role:$role,title:$title,adapterType:"hermes_local",
+        adapterConfig:{cwd:$cwd,env:{HERMES_HOME:{type:"plain",value:$home}},
+          hermesCommand:$hermesCommand,provider:"openai-codex",model:"gpt-5.6-sol",
+          maxTurnsPerRun:40,timeoutSec:900,graceSec:20,persistSession:true,
+          checkpoints:true,quiet:true,verbose:false,worktreeMode:false,
+          extraArgs:["--pass-session-id"],paperclipApiUrl:"http://paperclip-host:3100",
+          instructionsBundleMode:"managed",instructionsEntryFile:"AGENTS.md"},
+        runtimeConfig:{heartbeat:{enabled:false,maxConcurrentRuns:1}},
+        metadata:{agencyOsCoreRole:true,roleId:$roleId}}
+       + (if $reports=="" then {reportsTo:null} else {reportsTo:$reports} end)')
+    if test -z "$agent_id"; then
+      create_payload=$(jq \
+        '. + {permissions:{canCreateAgents:false,canCreateSkills:false,canAssignTasks:false,trustPreset:"standard"}}' \
+        <<<"$payload")
+      agent_id=$(api_call POST "/companies/$company_id/agents" "$create_payload" | jq -er .id)
+      agents=$(api_call GET "/companies/$company_id/agents")
+    else
+      payload=$(jq '. + {replaceAdapterConfig:true}' <<<"$payload")
+      api_call PATCH "/agents/$agent_id" "$payload" >/dev/null
+    fi
+    can_assign=false
+    test "$slug" != agency-director || can_assign=true
+    api_call PATCH "/agents/$agent_id/permissions" \
+      "$(jq -nc --argjson assign "$can_assign" \
+        '{canCreateAgents:false,canCreateSkills:false,canAssignTasks:$assign,trustPreset:"standard"}')" >/dev/null
+    api_call PUT "/agents/$agent_id/instructions-bundle/file" \
+      "$(jq -n --rawfile content "/opt/paperclip/integration/factory/core-roles/$slug/AGENTS.md" \
+        '{path:"AGENTS.md",content:$content,clearLegacyPromptTemplate:true}')" >/dev/null
+    api_call POST "/agents/$agent_id/pause" '{}' >/dev/null
+    next=$(mktemp "$state/.core-ids.XXXXXX")
+    jq --arg slug "$slug" --arg id "$agent_id" '. + {($slug):$id}' "$tmp" >"$next"
+    mv -f "$next" "$tmp"
+    test "$slug" != agency-director || director_id=$agent_id
+  done <"$registry"
+  test "$(jq 'length' "$tmp")" -eq 8
+  install -o root -g root -m 0600 "$tmp" "$core_ids"
+  rm -f "$tmp"
+}
+
+activate() {
+  test -f /var/lib/paperclip-appliance/complete || { echo "appliance is not initialized" >&2; exit 69; }
+  test -f "$registry" || { echo "Core role registry is missing" >&2; exit 69; }
+  test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 8
+  install -d -o root -g root -m 0700 "$state"
+  require_quiescent
+  if test -f "$status_file" && test "$(jq -r '.status' "$status_file")" = active; then
+    /usr/local/sbin/paperclip-appliance-verify --platform-only
+    echo "Core roles are already active and platform verification passed"
+    exit 0
+  fi
+  if test ! -f "$legacy_ids"; then
+    test "$(jq 'length' /etc/paperclip/hermes-agent-ids.json)" -eq 4 || {
+      echo "expected the released four-profile identity map" >&2
+      exit 69
+    }
+    install -o root -g root -m 0600 /etc/paperclip/hermes-agent-ids.json "$legacy_ids"
+  fi
+  if test ! -f "$state/release-assets-installed"; then
+    /usr/local/sbin/paperclip-appliance-verify --platform-only
+    /opt/paperclip/ops/paperclip-backup.sh >/dev/null
+  fi
+  install_release_assets
+  touch "$state/release-assets-installed"
+  chmod 0600 "$state/release-assets-installed"
+  # shellcheck disable=SC1091
+  . /opt/paperclip/integration/build/appliance.lock
+  create_or_update_core_agents
+  copy_existing_credential
+  perform_activation_cutover
+  echo "Eight Core roles activated; run sudo ./verify.sh"
+}
+
+rollback() {
+  install -d -o root -g root -m 0700 "$state"
+  test -f "$legacy_ids" && test -f "$core_ids" || {
+    echo "no completed Core role transition state exists" >&2
+    exit 66
+  }
+  require_quiescent
+  /opt/paperclip/ops/paperclip-backup.sh >/dev/null
+  perform_rollback_cutover
+  echo "Legacy four-profile runtime restored; deploy the prior reviewed release for full verifier alignment"
+}
+
+main() {
+  test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+  action=${1:-}
+  case "$action" in
+    activate|rollback) ;;
+    *) echo "usage: $0 {activate|rollback}" >&2; exit 64;;
+  esac
+  exec 9>/run/lock/paperclip-core-role-transition.lock
+  flock -n 9 || { echo "another Core role transition is running" >&2; exit 75; }
+  "$action"
+}
+
+if test "${BASH_SOURCE[0]}" = "$0"; then
+  main "$@"
+fi

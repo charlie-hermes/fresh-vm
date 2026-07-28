@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+
+company_id=${1:-}
+probe=${2:-}
+case "$company_id" in
+  ????????-????-????-????-????????????) ;;
+  *) echo "valid company UUID required" >&2; exit 64 ;;
+esac
+case "$company_id" in
+  *[!A-Fa-f0-9-]*) echo "valid company UUID required" >&2; exit 64 ;;
+esac
+case "$probe" in
+  ''|*[!A-Za-z0-9-]*) echo "safe acceptance probe required" >&2; exit 64 ;;
+esac
+
+pattern="POST /api/companies/$company_id/issues?acceptanceProbe=$probe 403"
+count=$(LC_ALL=C.UTF-8 grep -F -c "$pattern" || true)
+if test "$count" -ne 1; then
+  echo "expected one authoritative assignment denial trace, found $count" >&2
+  exit 1
+fi
+
+echo "PAPERCLIP ASSIGNMENT DENIAL TRACE PASS"

@@ -212,6 +212,10 @@ install -o root -g root -m 0755 "$repo/scripts/profile-init" \
   /usr/local/sbin/paperclip-hermes-profile-init
 install -o root -g root -m 0755 "$repo/scripts/credential-install" \
   /usr/local/sbin/paperclip-hermes-credential-install
+install -o root -g root -m 0755 "$repo/scripts/core-role-transition" \
+  /usr/local/sbin/paperclip-core-role-transition
+install -o root -g root -m 0755 "$repo/scripts/runtime-bundle-verify" \
+  /opt/paperclip/ops/runtime-bundle-verify
 install -o root -g root -m 0755 "$repo/verify.sh" \
   /usr/local/sbin/paperclip-appliance-verify
 

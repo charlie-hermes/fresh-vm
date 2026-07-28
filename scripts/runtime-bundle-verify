@@ -1,0 +1,75 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+# shellcheck disable=SC1091
+. /opt/paperclip/integration/build/appliance.lock
+registry=/opt/paperclip/integration/factory/core-roles.tsv
+agent_ids=/etc/paperclip/hermes-agent-ids.json
+board=/opt/paperclip/ops/paperclip-board-api
+hermes_root=/opt/hermes-agent/$HERMES_COMMIT
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+: >"$work/results.jsonl"
+while IFS=$'\t' read -r slug _ _ _ _ denied agents_sha soul_sha; do
+  case "$slug" in ''|\#*) continue;; esac
+  home=/var/lib/paperclip/agents/$slug/home
+  workspace=/srv/paperclip/workspaces/$slug
+  test "$(sha256sum "$workspace/AGENTS.md" | awk '{print $1}')" = "$agents_sha"
+  test "$(sha256sum "$home/SOUL.md" | awk '{print $1}')" = "$soul_sha"
+  IFS=, read -r -a denied_list <<<"$denied"
+  for tool in "${denied_list[@]}"; do
+    ! grep -qx "    - $tool" "$home/config.yaml" || {
+      echo "denied toolset remains enabled for $slug: $tool" >&2
+      exit 1
+    }
+  done
+  agent_id=$(jq -er --arg slug "$slug" '.[$slug]' "$agent_ids")
+  "$board" GET "/agents/$agent_id/instructions-bundle/file?path=AGENTS.md" |
+    jq -j '.content' >"$work/$slug-managed-AGENTS.md"
+  test "$(sha256sum "$work/$slug-managed-AGENTS.md" | awk '{print $1}')" = \
+    "$agents_sha"
+  result=$(runuser -u paperclip -- env \
+    HERMES_HOME="$home" PYTHONPATH="$hermes_root" \
+    "$hermes_root/venv/bin/python" - "$workspace" <<'PYVERIFY'
+import hashlib
+import json
+import os
+import sys
+from pathlib import Path
+
+workspace = Path(sys.argv[1])
+os.chdir(workspace)
+from agent.prompt_builder import build_context_files_prompt, load_soul_md
+home = Path(os.environ["HERMES_HOME"])
+expected_soul = (home / "SOUL.md").read_text(encoding="utf-8").strip()
+expected_agents = (workspace / "AGENTS.md").read_text(encoding="utf-8").strip()
+loaded_soul = load_soul_md()
+loaded_context = build_context_files_prompt(cwd=str(workspace), skip_soul=True)
+expected_context = (
+    "# Project Context\n\n"
+    "The following project context files have been loaded and should be followed:\n\n"
+    "## AGENTS.md\n\n" + expected_agents
+)
+passed = loaded_soul == expected_soul and loaded_context == expected_context
+print(json.dumps({
+    "freshProcess": True,
+    "soulLoadedExactly": loaded_soul == expected_soul,
+    "agentsLoadedExactly": loaded_context == expected_context,
+    "soulSha256": hashlib.sha256((home / "SOUL.md").read_bytes()).hexdigest(),
+    "agentsSha256": hashlib.sha256((workspace / "AGENTS.md").read_bytes()).hexdigest(),
+    "pass": passed,
+}, separators=(",", ":")))
+if not passed:
+    raise SystemExit(1)
+PYVERIFY
+  )
+  jq -c --arg slug "$slug" --arg deniedToolsets "$denied" \
+    '. + {slug:$slug,managedInstructionsExact:true,
+      deniedToolsets:($deniedToolsets|split(","))}' <<<"$result" \
+    >>"$work/results.jsonl"
+done <"$registry"
+jq -s 'if length==8 and all(.[];.pass==true) then . else error("runtime bundle verification failed") end' \
+  "$work/results.jsonl"

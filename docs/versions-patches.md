@@ -17,7 +17,7 @@
 2. `paperclip-2026.720.0-session-fingerprint.patch`: removes volatile timestamp fields from the effective run fingerprint so valid sessions are not reset each heartbeat. Affects the server effective-run-config fingerprint module.
 3. `paperclip-2026.720.0-onboarding-assets/`: restores five files omitted from the installed `@paperclipai/server 2026.720.0` package using byte-identical files from the local npm cache for the same version. Loader test passed for default (1 file) and CEO (4 files) bundles.
 4. `paperclip-2026.720.0-hermes-safe-api-client.patch`: instructs Hermes prompts to use the FD-based API client instead of placing bearer values in command arguments.
-5. `paperclip-2026.720.0-global-concurrency.patch`: adds a VM-wide heartbeat admission cap. `PAPERCLIP_HEARTBEAT_GLOBAL_MAX_CONCURRENT_RUNS=2` is enforced in addition to each employee's `maxConcurrentRuns=1`; a four-agent live test proved two running, two queued, and automatic promotion.
+5. `paperclip-2026.720.0-global-concurrency.patch`: adds a VM-wide heartbeat admission cap. `PAPERCLIP_HEARTBEAT_GLOBAL_MAX_CONCURRENT_RUNS=2` is enforced in addition to each employee's `maxConcurrentRuns=1`; an eight-agent live test must prove no more than two running, a queued state, and automatic promotion.
 
 ## Hermes remediations
 
@@ -59,6 +59,6 @@ the clean-VM release gates.
 - `/opt/paperclip/integration/**`
 - Paperclip adapter/server installed files described above
 - Hermes installed files described above
-- `/var/lib/paperclip/agents/{operations,research,production,qa}/home/**`
-- `/srv/paperclip/workspaces/{operations,research,production,qa}/**`
+- `/var/lib/paperclip/agents/<core-role>/home/**`
+- `/srv/paperclip/workspaces/<core-role>/**`
 - Docker network `paperclip-hermes`

@@ -3,10 +3,10 @@ set -eu
 
 case "${1:-}" in
   delegation)
-    pattern='^(\[done\][[:space:]]*)?┊[[:space:]]+🔀[[:space:]]+delegate[[:space:]]+2x:.*[[:space:]][[:space:]][0-9]+\.[0-9]s[[:space:]]*$'
+    pattern='^[[:space:]]*(\[done\][[:space:]]*)?┊[[:space:]]+🔀[[:space:]]+delegate[[:space:]]+2x:.*[[:space:]][[:space:]][0-9]+\.[0-9]s[[:space:]]*$'
     ;;
   web-search)
-    pattern='^(\[done\][[:space:]]*)?┊[[:space:]]+⚡[[:space:]]+web_searc[[:space:]].*[[:space:]][[:space:]][0-9]+\.[0-9]s[[:space:]]*$'
+    pattern='^[[:space:]]*(\[done\][[:space:]]*)?┊[[:space:]]+(🔍[[:space:]]+search|⚡[[:space:]]+web_searc)[[:space:]].*[[:space:]][[:space:]][0-9]+\.[0-9]s[[:space:]]*$'
     ;;
   *)
     echo "usage: paperclip-tool-completion-check {delegation|web-search}" >&2

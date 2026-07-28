@@ -32,6 +32,34 @@ test "$(node -p "require('./locks/paperclip/package-lock.json').packages['node_m
 test "$(files/bin/jq --version)" = "jq-$JQ_VERSION"
 test "$(sha256sum files/bin/jq | awk '{print $1}')" = "$JQ_SHA256"
 
+registry=files/factory/core-roles.tsv
+test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 8
+test "$(awk -F '\t' '$1 !~ /^#/ && NF {print $1}' "$registry" | sort -u | wc -l)" -eq 8
+test "$(awk -F '\t' '$1 !~ /^#/ && NF && $5=="-" {print $1}' "$registry")" =   agency-director
+while IFS=$'\t' read -r slug _ role _ reports denied agents_sha soul_sha; do
+  case "$slug" in ""|\#*) continue;; esac
+  case "$role" in ceo|pm|researcher|designer|qa|devops) ;; *) exit 1;; esac
+  case "$reports" in -|agency-director) ;; *) exit 1;; esac
+  test "$(sha256sum "files/factory/core-roles/$slug/AGENTS.md" | awk '{print $1}')" =     "$agents_sha"
+  test "$(sha256sum "files/factory/core-roles/$slug/SOUL.md" | awk '{print $1}')" =     "$soul_sha"
+  IFS=, read -r -a denied_list <<<"$denied"
+  test "${#denied_list[@]}" -gt 0
+  for tool in "${denied_list[@]}"; do
+    grep -qx "    - $tool" files/factory/config.yaml.template
+  done
+done <"$registry"
+
+for field in allowedActionPass deniedRefusalPass noSideEffectPass \
+  inputIntegrityPass denialTracePass assignmentPolicyPass roleBoundaryPass; do
+  grep -q "$field" scripts/functional-acceptance.sh
+  grep -q "$field" verify.sh
+done
+grep -q "trap 'restore_transition 129' HUP" scripts/core-role-transition
+grep -q "trap 'restore_transition 130' INT" scripts/core-role-transition
+grep -q "trap 'restore_transition 143' TERM" scripts/core-role-transition
+grep -q "runId // .id" scripts/functional-acceptance.sh
+grep -q "paperclip-http-denial-check" scripts/functional-acceptance.sh
+
 while IFS=$'\t' read -r component _ final relative; do
   case "$component" in ""|\#*) continue ;; esac
   target="overlays/$component/$relative"
@@ -46,6 +74,8 @@ while IFS=$'\t' read -r expected source destination; do
 done <locks/installed-assets.tsv
 test "$(tests/generate-installed-assets.sh)" = "$(cat locks/installed-assets.tsv)"
 ./tests/tool-completion.sh >/dev/null
+./tests/http-denial-evidence.sh >/dev/null
+./tests/core-transition.sh >/dev/null
 
 if git ls-files --others --cached --exclude-standard 2>/dev/null |
    grep -E '(^|/)(auth\.json|\.env|hermes\.env|offsite-backup\.conf)$' >/dev/null; then

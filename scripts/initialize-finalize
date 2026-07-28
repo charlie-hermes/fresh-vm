@@ -228,9 +228,8 @@ curl --fail --silent --show-error --max-time 5 "$api/health" |
   jq -e '.status=="ok" and .bootstrapStatus=="ready"' >/dev/null
 
 install -d -o paperclip -g paperclip -m 0750 /var/lib/paperclip/acceptance-evidence
-/opt/paperclip/ops/paperclip-backup.sh >/dev/null
-systemctl enable --now paperclip-health.timer paperclip-backup.timer \
-  paperclip-soak-sample.timer paperclip-offsite-sync.timer >/dev/null
+systemctl enable --now paperclip-health.timer \
+  paperclip-soak-sample.timer >/dev/null
 
 cat > /root/paperclip-firstboot-credentials <<EOF
 Paperclip clone initialized: $(date -u +%Y-%m-%dT%H:%M:%SZ)

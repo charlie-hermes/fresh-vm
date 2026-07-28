@@ -29,4 +29,4 @@ Hermes employees never receive the root board credential, Docker socket, host br
 
 ## Clone boundary
 
-Codex itself is not baked into a client company as an autonomous always-on super-employee. The image contains platform tooling and documented supervisory procedures; a trusted operator invokes Codex when needed. Any client clone must receive new instance identity, host identity, Paperclip secrets, Hermes provider credentials, backup key, and off-host namespace before use.
+Codex itself is not baked into a client company as an autonomous always-on super-employee. The image contains platform tooling and documented supervisory procedures; a trusted operator invokes Codex when needed. Any client clone must receive new instance identity, host identity, Paperclip secrets, and Hermes provider credentials before use. VM backup and recovery remain the human owner's responsibility.

@@ -28,13 +28,11 @@ install -d -o root -g root -m 0700 /etc/paperclip
 
 instance_id=$(cat /proc/sys/kernel/random/uuid)
 jwt_secret=$(openssl rand -hex 48)
-backup_secret=$(openssl rand -base64 48 | tr -d '\n')
 admin_password="Pc-$(openssl rand -hex 24)"
 
 printf '%s\n' "$instance_id" > /etc/paperclip/instance-id
 printf '%s\n' "$company_name" > /etc/paperclip/company-name
 chmod 0600 /etc/paperclip/company-name
-printf '%s\n' "$backup_secret" > /etc/paperclip/backup-encryption.passphrase
 cat > /etc/paperclip/paperclip.env <<EOF
 PAPERCLIP_AGENT_JWT_SECRET=$jwt_secret
 PAPERCLIP_AGENT_JWT_DISABLE_LEGACY_FALLBACK=true
@@ -44,7 +42,6 @@ EOF
 install -o root -g paperclip -m 0640 /etc/paperclip/paperclip.env "$instance/.env"
 chown paperclip:paperclip "$instance/.env"
 chmod 0600 "$instance/.env"
-install -o root -g paperclip -m 0640 "$template/offsite-backup.conf.example" /etc/paperclip/offsite-backup.conf
 
 jq '.["$meta"].updatedAt=(now|todateiso8601)' "$template/config.json" > "$bootstrap/config.json"
 install -o paperclip -g paperclip -m 0600 "$bootstrap/config.json" "$instance/config.json"

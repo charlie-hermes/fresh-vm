@@ -4,13 +4,12 @@
 
 Turn one clean, manually created Ubuntu 24.04 amd64 VM into the locked
 Hermes/Paperclip/Docker appliance defined by this repository. Completion means
-`sudo ./verify.sh` prints all six release gates:
+`sudo ./verify.sh` prints all five release gates:
 
 ```text
 PLATFORM: PASS
 FUNCTIONAL ACCEPTANCE: PASS
 SECRET AUDIT: PASS
-BACKUP: PASS
 SYSTEMD FAILED UNITS: 0
 PRODUCTION: READY
 ```
@@ -32,17 +31,14 @@ capacity. Do not bypass those checks.
 
 ## Required operator inputs
 
-Two secrets/integrations are intentionally absent from Git:
+One secret is intentionally absent from Git:
 
 1. A valid Hermes `auth.json`, supplied by an absolute path to a root-readable
-   regular file.
-2. A root-readable offsite configuration naming two different, currently
-   mounted remote filesystems: encrypted backup storage and independent
-   recovery-key escrow.
+   regular file. Never paste its contents into chat, a command line, Git, logs,
+   or issue comments.
 
-If the operator has not supplied both paths, run only the bootstrap and then
-ask for those two paths. Never paste their contents into chat, a command line,
-Git, logs, or issue comments.
+VM snapshots, backups, and recovery are managed by the human VM owner and are
+outside this project's completion checks.
 
 ## Execution
 
@@ -50,14 +46,7 @@ From the repository root:
 
 ```bash
 sudo ./bootstrap.sh
-sudo ./configure-secrets.sh /secure/path/hermes-auth.json /secure/path/offsite-backup.conf
-sudo reboot
-```
-
-After reconnecting to the same VM:
-
-```bash
-cd /path/to/fresh-vm
+sudo ./configure-secrets.sh /secure/path/hermes-auth.json
 sudo ./verify.sh
 ```
 
@@ -74,11 +63,11 @@ or replace an acceptance gate to make a rerun pass.
 - Never expose or mount the Docker socket into a Hermes employee container.
 - Preserve one isolated Hermes home and workspace per employee.
 - Preserve strict local secret encryption, JWT legacy-fallback denial, the
-  Docker egress policy, global concurrency cap, encrypted backups, and required
-  verified offsite replication.
-- Post-reboot functional runs must be performed by all eight Core employees
-  from reset sessions and independently inspected from the host. Static checks
-  or file presence alone are not acceptance.
+  Docker egress policy, and global concurrency cap.
+- VM snapshots, backups, and recovery stay under the human VM owner's control.
+- Functional runs must be performed by all eight Core employees from reset
+  sessions and independently inspected from the host. Static checks or file
+  presence alone are not acceptance.
 - Never commit credentials, generated instance data, evidence, or backup
   artifacts.
 

@@ -53,8 +53,7 @@ platform_check() {
     fail "network policy rules or live probes"
   systemctl is-active --quiet paperclip.service || fail "Paperclip inactive"
   systemctl is-enabled --quiet paperclip.service || fail "Paperclip not enabled"
-  for timer in paperclip-backup.timer paperclip-health.timer \
-    paperclip-offsite-sync.timer paperclip-soak-sample.timer; do
+  for timer in paperclip-health.timer paperclip-soak-sample.timer; do
     systemctl is-enabled --quiet "$timer" || fail "$timer not enabled"
     systemctl is-active --quiet "$timer" || fail "$timer not active"
   done
@@ -98,8 +97,6 @@ platform_check() {
     /etc/paperclip/paperclip.env || fail "legacy JWT fallback"
   test "$(stat -c '%a:%U' /etc/paperclip/operator.env)" = "600:root" ||
     fail "operator credential permissions"
-  test "$(stat -c '%a:%U' /etc/paperclip/backup-encryption.passphrase)" = "600:root" ||
-    fail "backup-key permissions"
 
   company_id=$(tr -d '\n' </etc/paperclip/company-id)
   agents=$(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company_id/agents")
@@ -203,14 +200,7 @@ while IFS=$'\t' read -r slug _; do
   test "$(stat -c '%a:%U' "/var/lib/paperclip/agents/$slug/home/auth.json")" = \
     "600:paperclip" || fail "$slug credential permissions"
 done </opt/paperclip/integration/factory/core-roles.tsv
-test -f /var/lib/paperclip-appliance/configured-boot-id ||
-  fail "configuration boot marker is missing"
-configured_boot=$(tr -d '\n' </var/lib/paperclip-appliance/configured-boot-id)
 current_boot=$(tr -d '\n' </proc/sys/kernel/random/boot_id)
-test "$configured_boot" != "$current_boot" ||
-  fail "reboot required after configure-secrets.sh"
-grep -qx 'PAPERCLIP_OFFSITE_REQUIRED=true' /etc/paperclip/offsite-backup.conf ||
-  fail "required off-host backup is not configured"
 
 /opt/paperclip/ops/functional-acceptance.sh
 jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
@@ -235,29 +225,6 @@ jq -e '.pass==true and .credentialValuesCompared>0 and .runsScanned>0 and
   /var/lib/paperclip/acceptance-evidence/secret-audit.json >/dev/null ||
   fail "secret audit evidence"
 echo "SECRET AUDIT: PASS"
-
-systemctl start paperclip-backup.service
-/opt/paperclip/ops/paperclip-verify-encrypted-backup.sh >/dev/null
-systemctl start paperclip-offsite-sync.service
-offsite_status=/var/lib/paperclip/backups/offsite-status/last-success.json
-test -f "$offsite_status" || fail "off-host backup status missing"
-instance_id=$(tr -d '\n' </etc/paperclip/instance-id)
-latest_state=$(find /var/lib/paperclip/backups/encrypted -maxdepth 1 \
-  -type f -name 'state-*.tar.gz.gpg' -printf '%T@ %f\n' |
-  sort -nr | head -n 1 | cut -d' ' -f2-)
-latest_database=$(find /var/lib/paperclip/backups/encrypted -maxdepth 1 \
-  -type f -name 'database-*.sql.gz.gpg' -printf '%T@ %f\n' |
-  sort -nr | head -n 1 | cut -d' ' -f2-)
-jq -e --arg instance "$instance_id" --arg state "$latest_state" \
-  --arg database "$latest_database" \
-  '.verified==true and .instanceId==$instance and
-   .latestState==$state and .latestDatabase==$database and
-   .recoveryKeyEscrowed==true and
-   (.mountSource|length)>0 and (.mountType|length)>0 and
-   (.escrowSource|length)>0 and (.escrowType|length)>0 and
-   .mountSource != .escrowSource' "$offsite_status" >/dev/null ||
-  fail "off-host backup does not match the latest encrypted backup"
-echo "BACKUP: PASS"
 
 failed_units=$(systemctl --failed --no-legend --plain | awk 'NF {count++} END {print count+0}')
 test "$failed_units" -eq 0 || {

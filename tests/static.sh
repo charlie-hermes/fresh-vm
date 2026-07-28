@@ -74,6 +74,16 @@ mutation_line=$(grep -n '^  create_or_update_core_agents$' scripts/core-role-tra
 test "$snapshot_line" -lt "$arm_line" && test "$arm_line" -lt "$mutation_line"
 ! grep -q 'already active and platform verification passed' scripts/core-role-transition
 
+grep -q 'usage: sudo ./configure-secrets.sh AUTH_JSON' configure-secrets.sh
+! grep -q 'OFFSITE_CONFIG\|configured-boot-id\|paperclip-backup\|offsite-sync' configure-secrets.sh
+! grep -q 'configured-boot-id\|PAPERCLIP_OFFSITE_REQUIRED\|BACKUP: PASS' verify.sh
+! grep -q 'paperclip-backup.timer\|paperclip-offsite-sync.timer' verify.sh
+! grep -q 'paperclip-backup.sh' scripts/core-role-transition
+grep -q 'paperclip-backup.timer paperclip-offsite-sync.timer' scripts/core-role-transition
+! grep -q 'paperclip-backup\|paperclip-offsite-sync' scripts/initialize-finalize
+! grep -q 'backup-encryption.passphrase\|offsite-backup.conf' scripts/initialize-pre
+! grep -q '/var/lib/paperclip/backups\|Encrypted Paperclip backup' files/ops/paperclip-health.sh
+
 while IFS=$'\t' read -r component _ final relative; do
   case "$component" in ""|\#*) continue ;; esac
   target="overlays/$component/$relative"

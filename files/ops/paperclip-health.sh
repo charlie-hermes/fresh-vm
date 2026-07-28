@@ -24,20 +24,8 @@ if [ "$swap_kib" -lt 1048576 ]; then
   exit 1
 fi
 
-latest_state=$(/usr/bin/find /var/lib/paperclip/backups/encrypted -maxdepth 1 -type f -name 'state-*.tar.gz.gpg' -printf '%T@ %p\n' | /usr/bin/sort -nr | /usr/bin/head -n 1 | /usr/bin/cut -d' ' -f2-)
-latest_database=$(/usr/bin/find /var/lib/paperclip/backups/encrypted -maxdepth 1 -type f -name 'database-*.sql.gz.gpg' -printf '%T@ %p\n' | /usr/bin/sort -nr | /usr/bin/head -n 1 | /usr/bin/cut -d' ' -f2-)
-test -n "$latest_state" && test -f "$latest_state.sha256"
-test -n "$latest_database" && test -f "$latest_database.sha256"
-now=$(/usr/bin/date +%s)
-state_age=$((now - $(/usr/bin/stat -c %Y "$latest_state")))
-database_age=$((now - $(/usr/bin/stat -c %Y "$latest_database")))
-if [ "$state_age" -gt 93600 ] || [ "$database_age" -gt 93600 ]; then
-  echo "Encrypted Paperclip backup is older than 26 hours" >&2
-  exit 1
-fi
-
 /usr/bin/jq -e '.secrets.strictMode == true and .auth.disableSignUp == true' /var/lib/paperclip/instances/default/config.json >/dev/null
 /usr/bin/grep -qx 'PAPERCLIP_AGENT_JWT_DISABLE_LEGACY_FALLBACK=true' /etc/paperclip/paperclip.env
 /usr/bin/grep -qx 'PAPERCLIP_HEARTBEAT_GLOBAL_MAX_CONCURRENT_RUNS=2' /etc/paperclip/paperclip.env
 
-echo "Paperclip health PASS; disk ${used_percent}%; swap ${swap_kib} KiB; encrypted backups current"
+echo "Paperclip health PASS; disk ${used_percent}%; swap ${swap_kib} KiB"

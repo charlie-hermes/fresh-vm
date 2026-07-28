@@ -13,7 +13,7 @@ fee19889a1b10a4e28bb3401d34fed6c85e7dcf24c7d00986d61e8b30e5f0657	files/ops/paper
 143eeb54397863e021765e61427d73c70642cb4b3675af166718308395b536af	files/ops/paperclip-offsite-sync.sh	/opt/paperclip/ops/paperclip-offsite-sync.sh
 415da4b0eeb0e34699864138a30535e7b404f7fdaff96f5e8acc4c99a98fa8c1	files/ops/paperclip-secret-audit.sh	/opt/paperclip/ops/paperclip-secret-audit.sh
 c67dde0e148aa6a4a94959ab8f197db37731252fa35cfd0bdd4aba16f65dff8f	files/ops/paperclip-soak-sample.sh	/opt/paperclip/ops/paperclip-soak-sample.sh
-2c2e5267baa8553bdcfcf6ede48f9d23435af98103f7568d08b9f0c293dcf1c7	files/ops/paperclip-tool-completion-check	/opt/paperclip/ops/paperclip-tool-completion-check
+d9a89ad53135ecc893a9bcefafb6a2a221bd305e222490e6761e3143d76effb3	files/ops/paperclip-tool-completion-check	/opt/paperclip/ops/paperclip-tool-completion-check
 f34cf18da88a1c76e75a2ff8c659ed89c2412b482c1efa69519664206e6aeb8a	files/ops/paperclip-upload-artifact	/opt/paperclip/ops/paperclip-upload-artifact
 41eb61ece1bfabfe46d21c233e305a194b36bc070c74263ca36227b383ca8e65	files/ops/paperclip-validate-remote-mount	/opt/paperclip/ops/paperclip-validate-remote-mount
 6091214434de196d9595bc8047b6e07e6d0d65f009a5ed117cfb9863287a6e18	files/ops/paperclip-verify-encrypted-backup.sh	/opt/paperclip/ops/paperclip-verify-encrypted-backup.sh
@@ -29,7 +29,7 @@ a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84	files/systemd/p
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f	files/systemd/paperclip.service	/etc/systemd/system/paperclip.service
 2e52cc8b5e0d94f84bb96b2951a3c981b4238b3c684dce765a3fd0fe049e294c	docs/architecture-security.md	/opt/paperclip/integration/docs/architecture-security.md
 efbf6a2261d37f3c47eb4ea29c86559eabc7236efad5e747aef431e6817dff06	docs/backup-restore.md	/opt/paperclip/integration/docs/backup-restore.md
-a383d68d3eb65d93c6e93f5ae60bb3fee309c52f21cf3ca452063961df40ec68	docs/core-role-activation.md	/opt/paperclip/integration/docs/core-role-activation.md
+a880aa7bf52beff23864b38cbbb5f49e4ee0b660da31f404bc4f8d4e531b4486	docs/core-role-activation.md	/opt/paperclip/integration/docs/core-role-activation.md
 e2d8e4225f577df68bc73c007c8e9d1feb362b77f5a236bcf4ba0b4160c7ddbc	docs/employee-operations.md	/opt/paperclip/integration/docs/employee-operations.md
 1da0f06c5a0bc90cb85c8e3fe4de90fd085321abee935998ceb793fd35b18d64	docs/operations-runbook.md	/opt/paperclip/integration/docs/operations-runbook.md
 d38cf11afc3b659bf24fe639f952a2d1707b758a7352ddc8aa47ac3571384fe8	docs/rollback.md	/opt/paperclip/integration/docs/rollback.md
@@ -67,10 +67,10 @@ e692d9caefff952a6ef12296dccdf8080ae23c00b7bda0a2bd26e4737928f426	files/paperclip
 59de0c5b0879e2e5e4ad8b1fbc31fdc5d5bebbe707f20f3b4f253a6420130634	files/paperclip/AGENTS-research.md	/opt/paperclip/integration/paperclip/AGENTS-research.md
 e810e41a42d9d7b545179a6e5b8c1cb1552ee876bbbda63a661ae2c49b03cf31	files/paperclip/config.json	/opt/paperclip/integration/paperclip/config.json
 f41d7b261f6a6ae3095b46c02140676a3be504f0ed6cb51deeb6f55af6004c6e	files/paperclip/offsite-backup.conf.example	/opt/paperclip/integration/paperclip/offsite-backup.conf.example
-aeaaf21aa9fa760016582e7c07da28c86b07c618cb0e3493da771add26edb09c	scripts/functional-acceptance.sh	/opt/paperclip/ops/functional-acceptance.sh
+d12c531f8385d92eccb303f02540fd084c658abac0801ca26ef3cf99c7ee7e57	scripts/functional-acceptance.sh	/opt/paperclip/ops/functional-acceptance.sh
 57dce821647449415e8c8246138d95f888592179cb323695598e76811e1459d8	scripts/profile-init	/usr/local/sbin/paperclip-hermes-profile-init
 f6386840b596dd66bfdfb1f0e0e7310e7974600babec4e917d7af66f278ecbf4	scripts/credential-install	/usr/local/sbin/paperclip-hermes-credential-install
 09ca1bc1d1684055347925483689cd5ccc8bf49c6b35a8a3cb3d356360e693d8	scripts/core-role-transition	/usr/local/sbin/paperclip-core-role-transition
 30175d33ffec77c202488349aee6c3f1518e80b92c2b6fb84297034ae40d682a	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
-f1d8bb3d160b4bf87b4a2fa1dc7dc5901c468309789aec22b0de1a673056ba1a	verify.sh	/usr/local/sbin/paperclip-appliance-verify
+4f26114ab7a73596b4a2ff4c9afc550b0d0ddd1d060f4f700e27221d7d7b8843	verify.sh	/usr/local/sbin/paperclip-appliance-verify
 3ae66804caf55bd1bf32de28f2e80bf0312d0ce96063423dd14e342eac1b03d7	appliance.lock	/opt/paperclip/integration/build/appliance.lock

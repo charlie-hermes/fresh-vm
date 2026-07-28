@@ -14,6 +14,7 @@ run_case() {
     hup) expected=129 ;;
     int) expected=130 ;;
     term) expected=143 ;;
+    exit) expected=98 ;;
     error) expected=97 ;;
     *) echo "unknown injection: $injection" >&2; exit 64 ;;
   esac
@@ -53,6 +54,7 @@ run_case() {
             hup) kill -HUP "$$" ;;
             int) kill -INT "$$" ;;
             term) kill -TERM "$$" ;;
+            exit) exit 98 ;;
             error) return 97 ;;
           esac
         }
@@ -95,12 +97,12 @@ run_case() {
 }
 
 for checkpoint in legacy-paused core-map-installed core-resumed sessions-reset status-written; do
-  for injection in hup int term error; do
+  for injection in hup int term exit error; do
     run_case activate "$checkpoint" "$injection"
   done
 done
 for checkpoint in core-paused legacy-map-installed legacy-resumed rollback-status-written; do
-  for injection in hup int term error; do
+  for injection in hup int term exit error; do
     run_case rollback "$checkpoint" "$injection"
   done
 done

@@ -50,13 +50,15 @@ while IFS=$'\t' read -r slug _ role _ reports denied agents_sha soul_sha; do
 done <"$registry"
 
 for field in allowedActionPass deniedRefusalPass noSideEffectPass \
-  assignmentPolicyPass roleBoundaryPass; do
+  inputIntegrityPass denialTracePass assignmentPolicyPass roleBoundaryPass; do
   grep -q "$field" scripts/functional-acceptance.sh
   grep -q "$field" verify.sh
 done
 grep -q "trap 'restore_transition 129' HUP" scripts/core-role-transition
 grep -q "trap 'restore_transition 130' INT" scripts/core-role-transition
 grep -q "trap 'restore_transition 143' TERM" scripts/core-role-transition
+grep -q "runId // .id" scripts/functional-acceptance.sh
+grep -q "acceptanceProbe=\$marker 403" scripts/functional-acceptance.sh
 
 while IFS=$'\t' read -r component _ final relative; do
   case "$component" in ""|\#*) continue ;; esac

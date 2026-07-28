@@ -80,13 +80,17 @@ and read a mutually exclusive workspace sentinel inside its Docker identity,
 confirm Docker sockets are absent, and return an attributed Paperclip comment.
 The Strategist must also produce successful web-search tool-completion evidence.
 The Director must create exactly one scoped backlog child assigned to the Brief
-Steward; the Steward must attempt the inverse assignment and receive a real API
-denial, proving both values of `canAssignTasks`. Host inspection validates the
-allowed artifacts, denied side effects, source immutability where applicable,
+Steward. The Steward must attempt the inverse assignment through a URL carrying
+a unique per-run probe token; host-owned Paperclip service journal evidence must
+show that exact POST returned 403, and the Steward issue must have zero children
+of any title. Together these prove both values of `canAssignTasks` without
+trusting agent-authored claims. Host inspection validates the allowed artifacts,
+denied side effects, the pre/post checksum of every immutable input and sentinel,
 every mount, and that the global scheduler ran exactly two concurrently while
 queueing the remainder. The retained evidence records `allowedAction`,
 `deniedAction`, `allowedActionPass`, `deniedRefusalPass`, `noSideEffectPass`,
-`assignmentPolicyPass`, and `roleBoundaryPass` for every role.
+`inputIntegrityPass`, `denialTracePass`, `assignmentPolicyPass`, and
+`roleBoundaryPass` for every role.
 
 This activates the runtime identities and their bounded local capabilities. It
 does not grant or claim real-client integrations, live publication authority,

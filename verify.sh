@@ -217,7 +217,8 @@ jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
   (.roles|length)==8 and all(.roles[];
     .pass==true and .roleBoundaryPass==true and
     .allowedActionPass==true and .deniedRefusalPass==true and
-    .noSideEffectPass==true and .assignmentPolicyPass==true and
+    .noSideEffectPass==true and .inputIntegrityPass==true and
+    .denialTracePass==true and .assignmentPolicyPass==true and
     (.allowedAction|length)>0 and (.deniedAction|length)>0) and
   (.runtimeBundles|length)==8 and all(.runtimeBundles[];
     .pass==true and .freshProcess==true and .soulLoadedExactly==true and

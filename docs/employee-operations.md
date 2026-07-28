@@ -19,10 +19,11 @@ Dependencies should use `blockedByIssueIds`. Managers create child issues with `
 
 ## Employee hierarchy
 
-The Agency Director is the only Core employee allowed to assign tasks. It
-cannot create agents or skills, change the appliance, resolve its own approval,
-or act as a specialist. The other seven Core roles cannot assign work, create
-agents, or create skills. Every employee has `maxConcurrentRuns=1`; the VM-wide
+Every Core employee is a protected Paperclip assignment target. The Agency
+Director is the only Core employee with the explicit assignment grant. It cannot
+create agents or skills, change the appliance, resolve its own approval, or act
+as a specialist. The other seven Core roles have no assignment grant and cannot
+create agents or skills. Every employee has `maxConcurrentRuns=1`; the VM-wide
 scheduler cap remains two.
 
 The eight profiles have distinct Hermes homes, workspaces, exact

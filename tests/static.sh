@@ -59,6 +59,20 @@ grep -q "trap 'restore_transition 130' INT" scripts/core-role-transition
 grep -q "trap 'restore_transition 143' TERM" scripts/core-role-transition
 grep -q "runId // .id" scripts/functional-acceptance.sh
 grep -q "paperclip-http-denial-check" scripts/functional-acceptance.sh
+grep -q 'web-search-log "$hermes_session"' scripts/functional-acceptance.sh
+grep -q 'assignmentPolicy:{mode:"protected"}' scripts/core-role-transition
+grep -q 'permissions.authorizationPolicy.assignmentPolicy.mode=="protected"' verify.sh
+grep -q 'already_active' scripts/core-role-transition
+grep -q 'activation_mode=reconcile' scripts/core-role-transition
+grep -q '^    validate_current_core_credentials$' scripts/core-role-transition
+grep -q '^    snapshot_reconcile_agents$' scripts/core-role-transition
+grep -q '^  arm_transition "$activation_mode"$' scripts/core-role-transition
+grep -q '^  if test "$already_active" = false; then$' scripts/core-role-transition
+snapshot_line=$(grep -n '^    snapshot_reconcile_agents$' scripts/core-role-transition | cut -d: -f1)
+arm_line=$(grep -n '^  arm_transition "$activation_mode"$' scripts/core-role-transition | cut -d: -f1)
+mutation_line=$(grep -n '^  create_or_update_core_agents$' scripts/core-role-transition | cut -d: -f1)
+test "$snapshot_line" -lt "$arm_line" && test "$arm_line" -lt "$mutation_line"
+! grep -q 'already active and platform verification passed' scripts/core-role-transition
 
 while IFS=$'\t' read -r component _ final relative; do
   case "$component" in ""|\#*) continue ;; esac

@@ -152,6 +152,7 @@ platform_check() {
         .permissions.canCreateSkills==false and
         .permissions.canAssignTasks==$assign and
         .permissions.trustPreset=="standard" and
+        .permissions.authorizationPolicy.assignmentPolicy.mode=="protected" and
         (if $reports=="" then .reportsTo==null else .reportsTo==$reports end)' \
       <<<"$agent" >/dev/null || fail "Core employee configuration drift: $slug"
     test "$(cat "/var/lib/paperclip/agents/$slug/.PROFILE_READY")" = "$slug" ||

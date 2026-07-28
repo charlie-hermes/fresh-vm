@@ -214,7 +214,11 @@ grep -qx 'PAPERCLIP_OFFSITE_REQUIRED=true' /etc/paperclip/offsite-backup.conf ||
 /opt/paperclip/ops/functional-acceptance.sh
 jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
   .queuedObserved==true and .maxConcurrentObserved==2 and
-  (.roles|length)==8 and all(.roles[];.pass==true) and
+  (.roles|length)==8 and all(.roles[];
+    .pass==true and .roleBoundaryPass==true and
+    .allowedActionPass==true and .deniedRefusalPass==true and
+    .noSideEffectPass==true and .assignmentPolicyPass==true and
+    (.allowedAction|length)>0 and (.deniedAction|length)>0) and
   (.runtimeBundles|length)==8 and all(.runtimeBundles[];
     .pass==true and .freshProcess==true and .soulLoadedExactly==true and
     .agentsLoadedExactly==true and .managedInstructionsExact==true)' \

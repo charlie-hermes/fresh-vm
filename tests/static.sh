@@ -49,6 +49,15 @@ while IFS=$'\t' read -r slug _ role _ reports denied agents_sha soul_sha; do
   done
 done <"$registry"
 
+for field in allowedActionPass deniedRefusalPass noSideEffectPass \
+  assignmentPolicyPass roleBoundaryPass; do
+  grep -q "$field" scripts/functional-acceptance.sh
+  grep -q "$field" verify.sh
+done
+grep -q "trap 'restore_transition 129' HUP" scripts/core-role-transition
+grep -q "trap 'restore_transition 130' INT" scripts/core-role-transition
+grep -q "trap 'restore_transition 143' TERM" scripts/core-role-transition
+
 while IFS=$'\t' read -r component _ final relative; do
   case "$component" in ""|\#*) continue ;; esac
   target="overlays/$component/$relative"
@@ -63,6 +72,7 @@ while IFS=$'\t' read -r expected source destination; do
 done <locks/installed-assets.tsv
 test "$(tests/generate-installed-assets.sh)" = "$(cat locks/installed-assets.tsv)"
 ./tests/tool-completion.sh >/dev/null
+./tests/core-transition.sh >/dev/null
 
 if git ls-files --others --cached --exclude-standard 2>/dev/null |
    grep -E '(^|/)(auth\.json|\.env|hermes\.env|offsite-backup\.conf)$' >/dev/null; then

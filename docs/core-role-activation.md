@@ -52,6 +52,13 @@ Activation is a reviewed release operation, not normal employee work.
    sudo ./verify.sh
    ```
 
+`core-role-transition` restores the prior identity map, employee states, and
+transition status after `ERR`, `HUP`, `INT`, or `TERM` at every recoverable
+cutover checkpoint. `SIGKILL` cannot be trapped; after a killed transition,
+wait for all runs and containers to stop, then rerun the same `activate` or
+`rollback` command. The command is idempotent and re-establishes the intended
+state before verification.
+
 Do not report activation complete until all six release lines pass.
 
 ## What acceptance proves
@@ -66,12 +73,20 @@ profile. It proves:
 - no bundle is blocked or substituted by Hermes context discovery.
 
 Functional acceptance then resets all eight Paperclip runtime sessions and
-assigns all eight employees real acceptance issues. Every role must create and
-read a mutually exclusive workspace sentinel inside its Docker identity,
+assigns all eight employees real, role-specific acceptance issues. Every role
+must complete one allowed action from a deterministic fixture, explicitly
+refuse its nearest denied action, leave the prohibited artifact absent, create
+and read a mutually exclusive workspace sentinel inside its Docker identity,
 confirm Docker sockets are absent, and return an attributed Paperclip comment.
-The two approved research roles must also produce successful web-search tool
-completion evidence. Host inspection verifies every mount and records that the
-global scheduler ran exactly two concurrently while queueing the remainder.
+The Strategist must also produce successful web-search tool-completion evidence.
+The Director must create exactly one scoped backlog child assigned to the Brief
+Steward; the Steward must attempt the inverse assignment and receive a real API
+denial, proving both values of `canAssignTasks`. Host inspection validates the
+allowed artifacts, denied side effects, source immutability where applicable,
+every mount, and that the global scheduler ran exactly two concurrently while
+queueing the remainder. The retained evidence records `allowedAction`,
+`deniedAction`, `allowedActionPass`, `deniedRefusalPass`, `noSideEffectPass`,
+`assignmentPolicyPass`, and `roleBoundaryPass` for every role.
 
 This activates the runtime identities and their bounded local capabilities. It
 does not grant or claim real-client integrations, live publication authority,

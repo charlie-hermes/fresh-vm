@@ -46,7 +46,8 @@ jq -e --arg commit "$AGENCY_OS_COMMIT" --arg company "$company_id" '
   .status=="pass" and .agency_os_commit==$commit and .company_id==$company and
   .brand_id=="brand_fleet" and .paperclip_authenticated==true and
   .buzz_authenticated==true and .provider_external_writes==false and
-  .enabled_modules==["ai_market_observatory","brand_twin","content_engine"] and
+  .enabled_modules==["ai_market_observatory","brand_agent","brand_twin",
+    "content_engine","controlled_actions"] and
   .brand_twin.approved_claim_count==8 and .brand_twin.mission_count==50 and
   .brand_twin.launch_mission_count==20 and
   .observatory.complete_run_count==2 and .observatory.observation_count==40 and

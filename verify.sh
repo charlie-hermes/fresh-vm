@@ -242,12 +242,14 @@ jq -e --arg commit "$AGENCY_OS_COMMIT" \
    .provider_external_writes==false and .mock_publication_calls==3 and
    .core.task_count==8 and .core.approval_status=="approved" and
    (.core.buzz_channel_id|length)>0 and
+   .core.paperclip_cost_event_recorded==true and
    .social.task_count==5 and .social.approval_status=="approved" and
    (.social.buzz_channel_id|length)>0 and
    .isolation_brand.task_count==8 and
    .isolation_brand.approval_status=="approved" and
    .isolation_brand.cross_brand_social_denied==true and
-   .isolation_brand.denial_created_tasks==false' "$evidence" >/dev/null ||
+   .isolation_brand.denial_created_tasks==false and
+   .isolation_brand.paperclip_cost_event_recorded==false' "$evidence" >/dev/null ||
   fail "Agency OS live workflow evidence"
 portal=$(curl --fail --silent --show-error --max-time 5 \
   http://127.0.0.1:3180/api/status) || fail "Agency OS operator portal health"

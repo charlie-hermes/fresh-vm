@@ -1,5 +1,5 @@
 314cec83198b9c9dfb9c5afd851f6206c5dbc89b6934abf822f28cf5f7d3401e	files/ops/agency-os-activate	/opt/paperclip/ops/agency-os-activate
-a02fe89e358c12e3ca9474cabd26acfedfebd9143fea08ab39a7fd88414bb72d	files/ops/agency-os-live-acceptance	/opt/paperclip/ops/agency-os-live-acceptance
+96501c4620dbd5bcf12e8ce9a580aac3a6c899fbd4ebebfbc5ea769a30107572	files/ops/agency-os-live-acceptance	/opt/paperclip/ops/agency-os-live-acceptance
 e78424424d1e7acc7fa6b7b94754735fff615ee8104d86328d6fdc67ad3cfc92	files/ops/paperclip-api	/opt/paperclip/ops/paperclip-api
 eeb66da8dadb451095b7d0da816f9ddec5b6a843fda1b10139485b760c7cbd35	files/ops/paperclip-backup.sh	/opt/paperclip/ops/paperclip-backup.sh
 e4af246514861ed58c7ef7658003061fe264d406ca1110764b4cf9d967bad473	files/ops/paperclip-board-api	/opt/paperclip/ops/paperclip-board-api
@@ -86,5 +86,5 @@ e779da7c1860f11eeed85fed5dc640a025d4c94ff854cb2a25146eea75ea1226	scripts/credent
 a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-role-transition	/usr/local/sbin/paperclip-core-role-transition
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
-39ca897f521201f7581bdf91b65698a90afb84ef8f31dd42caecf67be1938595	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-c8d001332484642a0e03594457fc8cd7d07bbbcb03aeed803a22cbb2b4307f04	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+167da1caea1e9fecfbbff330c15445edbeda4f6d0f2a45f9cb3c1728492e153d	verify.sh	/usr/local/sbin/paperclip-appliance-verify
+c4a2b7f6e1fd84b20dd3a102ac1e758a20c3b172bad4bc2ab4dbaae2f7020395	appliance.lock	/opt/paperclip/integration/build/appliance.lock

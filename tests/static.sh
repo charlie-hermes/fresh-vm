@@ -33,9 +33,9 @@ test "$(files/bin/jq --version)" = "jq-$JQ_VERSION"
 test "$(sha256sum files/bin/jq | awk '{print $1}')" = "$JQ_SHA256"
 
 registry=files/factory/core-roles.tsv
-test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 8
-test "$(awk -F '\t' '$1 !~ /^#/ && NF {print $1}' "$registry" | sort -u | wc -l)" -eq 8
-test "$(awk -F '\t' '$1 !~ /^#/ && NF && $5=="-" {print $1}' "$registry")" =   agency-director
+test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 12
+test "$(awk -F '\t' '$1 !~ /^#/ && NF {print $1}' "$registry" | sort -u | wc -l)" -eq 12
+test "$(awk -F '\t' '$1 !~ /^#/ && NF && $5=="-" {print $1}' "$registry" | paste -sd, -)" = agency-director,platform-assurance-reviewer
 while IFS=$'\t' read -r slug _ role _ reports denied agents_sha soul_sha; do
   case "$slug" in ""|\#*) continue;; esac
   case "$role" in ceo|pm|researcher|designer|qa|devops) ;; *) exit 1;; esac

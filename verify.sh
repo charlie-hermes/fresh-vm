@@ -105,12 +105,12 @@ platform_check() {
   jq -e 'all(.[]; .permissions.canCreateAgents==false and
     .permissions.canCreateSkills==false)' <<<"$agents" >/dev/null ||
     fail "employee creation authority drift"
-  test "$(jq 'length' "$agent_ids")" -eq 8 || fail "Core employee identity count"
+  test "$(jq 'length' "$agent_ids")" -eq 12 || fail "Agency employee identity count"
   core_id_array=$(jq -c '[.[]]' "$agent_ids")
   test "$(jq --argjson ids "$core_id_array" \
     '[.[] | .id as $id |
       select(.adapterType=="hermes_local" and ($ids|index($id)))] | length' \
-    <<<"$agents")" -eq 8 || fail "Core Hermes employee count"
+    <<<"$agents")" -eq 12 || fail "Agency Hermes employee count"
   jq -e --argjson ids "$core_id_array" 'all(.[];
     .id as $id |
     if .adapterType=="hermes_local" and (($ids|index($id))|not)
@@ -194,7 +194,7 @@ core_id_array=$(jq -c '[.[]]' /etc/paperclip/hermes-agent-ids.json)
 test "$(jq --argjson ids "$core_id_array" \
   '[.[] | .id as $id | select(.adapterType=="hermes_local" and
     ($ids|index($id)) and .status!="paused")] | length' \
-  <<<"$agents")" -eq 8 || fail "one or more Core Hermes employees remain paused"
+  <<<"$agents")" -eq 12 || fail "one or more Agency Hermes employees remain paused"
 while IFS=$'\t' read -r slug _; do
   case "$slug" in ""|\#*) continue;; esac
   test "$(stat -c '%a:%U' "/var/lib/paperclip/agents/$slug/home/auth.json")" = \
@@ -205,18 +205,58 @@ current_boot=$(tr -d '\n' </proc/sys/kernel/random/boot_id)
 /opt/paperclip/ops/functional-acceptance.sh
 jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
   .queuedObserved==true and .maxConcurrentObserved==2 and
-  (.roles|length)==8 and all(.roles[];
+  (.roles|length)==12 and all(.roles[];
     .pass==true and .roleBoundaryPass==true and
     .allowedActionPass==true and .deniedRefusalPass==true and
     .noSideEffectPass==true and .inputIntegrityPass==true and
     .denialTracePass==true and .assignmentPolicyPass==true and
     (.allowedAction|length)>0 and (.deniedAction|length)>0) and
-  (.runtimeBundles|length)==8 and all(.runtimeBundles[];
+  (.runtimeBundles|length)==12 and all(.runtimeBundles[];
     .pass==true and .freshProcess==true and .soulLoadedExactly==true and
     .agentsLoadedExactly==true and .managedInstructionsExact==true)' \
   /var/lib/paperclip/acceptance-evidence/functional-acceptance.json >/dev/null ||
   fail "functional evidence"
 echo "FUNCTIONAL ACCEPTANCE: PASS"
+
+test "$(git -C /opt/agency-os/current rev-parse HEAD)" = "$AGENCY_OS_COMMIT" ||
+  fail "Agency OS release drift"
+hash_is /usr/local/bin/buzz "$AGENCY_OS_BUZZ_SHA256" ||
+  fail "Buzz binary drift"
+systemctl is-enabled --quiet agency-os-operator.service ||
+  fail "Agency OS operator portal is not enabled"
+systemctl is-active --quiet agency-os-operator.service ||
+  fail "Agency OS operator portal is not active"
+buzz_uid=$(id -u ubuntu)
+runuser -u ubuntu -- env XDG_RUNTIME_DIR="/run/user/$buzz_uid" \
+  systemctl --user is-active --quiet buzz-codex-bridge.service ||
+  fail "Buzz bridge is not active"
+ss -ltnH | awk '{print $4}' | grep -qx '127.0.0.1:3180' ||
+  fail "Agency OS operator portal bind address"
+evidence=/var/lib/paperclip-appliance/agency-os-production.json
+test "$(stat -c '%a:%U' "$evidence")" = "600:root" ||
+  fail "Agency OS production evidence permissions"
+jq -e --arg commit "$AGENCY_OS_COMMIT" \
+  '.schema_version=="1.0" and .status=="live_production" and
+   .agency_os_commit==$commit and .brand_id=="brand_agency_live" and
+   .paperclip_authenticated==true and .buzz_authenticated==true and
+   .provider_external_writes==false and .mock_publication_calls==3 and
+   .core.task_count==8 and .core.approval_status=="approved" and
+   (.core.buzz_channel_id|length)>0 and
+   .social.task_count==5 and .social.approval_status=="approved" and
+   (.social.buzz_channel_id|length)>0 and
+   .isolation_brand.task_count==8 and
+   .isolation_brand.approval_status=="approved" and
+   .isolation_brand.cross_brand_social_denied==true and
+   .isolation_brand.denial_created_tasks==false' "$evidence" >/dev/null ||
+  fail "Agency OS live workflow evidence"
+portal=$(curl --fail --silent --show-error --max-time 5 \
+  http://127.0.0.1:3180/api/status) || fail "Agency OS operator portal health"
+jq -e '.authority=="paperclip" and .projection=="read_only" and
+  .admin.role_bundle_count==12 and .portfolio.brand_count==2 and
+  (.portfolio.campaign_count>=3) and (.approvals|length)==3' \
+  <<<"$portal" >/dev/null ||
+  fail "Agency OS operator portal evidence"
+echo "AGENCY OS: LIVE"
 
 /opt/paperclip/ops/paperclip-secret-audit.sh >/dev/null
 jq -e '.pass==true and .credentialValuesCompared>0 and .runsScanned>0 and

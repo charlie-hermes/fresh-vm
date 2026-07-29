@@ -94,14 +94,14 @@ copy_status_file() {
 }
 
 snapshot_reconcile_agents() {
-  local tmp next files_tmp agent_id agent instruction slug
+  local tmp next files_tmp agent_id agent instruction slug expected_count
   local -a managed_files=()
   test ! -e "$reconcile_snapshot" && test ! -e "$reconcile_core_ids" &&
     test ! -e "$reconcile_files" || {
     echo "an incomplete Core reconciliation snapshot already exists" >&2
     exit 75
   }
-  while IFS=$'\t' read -r slug _; do
+  while IFS= read -r slug; do
     case "$slug" in ''|\#*) continue;; esac
     managed_files+=(
       "var/lib/paperclip/agents/$slug/.PROFILE_READY"
@@ -111,7 +111,7 @@ snapshot_reconcile_agents() {
       "var/lib/paperclip/agents/$slug/home/skills/paperclip-employee"
       "srv/paperclip/workspaces/$slug/AGENTS.md"
     )
-  done <"$registry"
+  done < <(jq -r 'keys[]' "$core_ids")
   files_tmp=$(mktemp "$state/.reconcile-files.XXXXXX")
   tar --create --file "$files_tmp" --numeric-owner -C / "${managed_files[@]}"
   tmp=$(mktemp "$state/.reconcile-snapshot.XXXXXX")
@@ -124,7 +124,8 @@ snapshot_reconcile_agents() {
       '. + [{agent:$agent,instruction:$instruction}]' "$tmp" >"$next"
     mv -f "$next" "$tmp"
   done < <(jq -r '.[]' "$core_ids")
-  test "$(jq 'length' "$tmp")" -eq 8
+  expected_count=$(jq 'length' "$core_ids")
+  test "$(jq 'length' "$tmp")" -eq "$expected_count"
   install -o root -g root -m 0600 "$core_ids" "$reconcile_core_ids"
   install -o root -g root -m 0600 "$files_tmp" "$reconcile_files"
   install -o root -g root -m 0600 "$tmp" "$reconcile_snapshot"
@@ -322,8 +323,15 @@ install_release_assets() {
     /usr/local/sbin/paperclip-core-role-transition
   install -o root -g root -m 0755 "$repo/scripts/runtime-bundle-verify" \
     /opt/paperclip/ops/runtime-bundle-verify
+  install -o root -g root -m 0755 "$repo/scripts/agency-os-install" \
+    /usr/local/sbin/agency-os-install
   install -o root -g root -m 0755 "$repo/verify.sh" \
     /usr/local/sbin/paperclip-appliance-verify
+  for unit in "$repo"/files/systemd/*; do
+    install -o root -g root -m 0644 "$unit" "/etc/systemd/system/$(basename "$unit")"
+  done
+  systemctl daemon-reload
+  "$repo/scripts/agency-os-install" >/dev/null
 }
 
 copy_existing_credential() {
@@ -362,33 +370,51 @@ copy_existing_credential() {
 }
 
 validate_current_core_credentials() {
-  local unique_hashes env_count=0
-  unique_hashes=$(while IFS=$'\t' read -r slug _; do
-    case "$slug" in ''|\#*) continue;; esac
+  local unique_hashes env_count=0 profile_count
+  profile_count=$(jq 'length' "$core_ids")
+  test "$profile_count" -ge 8 && test "$profile_count" -le 12
+  unique_hashes=$(while IFS= read -r slug; do
     test -f "/var/lib/paperclip/agents/$slug/home/auth.json" || {
       echo "missing Core profile credential: $slug" >&2; exit 69;
     }
     sha256sum "/var/lib/paperclip/agents/$slug/home/auth.json" | awk '{print $1}'
-  done <"$registry" | sort -u | wc -l)
+  done < <(jq -r 'keys[]' "$core_ids") | sort -u | wc -l)
   test "$unique_hashes" -eq 1 || {
     echo "Core profile credentials differ; use the credential installer before reconciliation" >&2
     exit 78
   }
-  while IFS=$'\t' read -r slug _; do
-    case "$slug" in ''|\#*) continue;; esac
+  while IFS= read -r slug; do
     test ! -f "/var/lib/paperclip/agents/$slug/home/.env" || env_count=$((env_count + 1))
-  done <"$registry"
-  case "$env_count" in 0|8) ;; *) echo "Core profile environment files differ" >&2; exit 78;; esac
-  if test "$env_count" -eq 8; then
-    unique_hashes=$(while IFS=$'\t' read -r slug _; do
-      case "$slug" in ''|\#*) continue;; esac
+  done < <(jq -r 'keys[]' "$core_ids")
+  test "$env_count" -eq 0 || test "$env_count" -eq "$profile_count" || {
+    echo "Agency profile environment files differ" >&2
+    exit 78
+  }
+  if test "$env_count" -eq "$profile_count"; then
+    unique_hashes=$(while IFS= read -r slug; do
       sha256sum "/var/lib/paperclip/agents/$slug/home/.env" | awk '{print $1}'
-    done <"$registry" | sort -u | wc -l)
+    done < <(jq -r 'keys[]' "$core_ids") | sort -u | wc -l)
     test "$unique_hashes" -eq 1 || {
       echo "Core profile environment files differ" >&2
       exit 78
     }
   fi
+}
+
+fill_missing_core_credentials() {
+  local source_home=/var/lib/paperclip/agents/agency-director/home slug home
+  test -f "$source_home/auth.json"
+  while IFS=$'\t' read -r slug _; do
+    case "$slug" in ''|\#*) continue;; esac
+    home=/var/lib/paperclip/agents/$slug/home
+    if test ! -f "$home/auth.json"; then
+      install -o paperclip -g paperclip -m 0600 "$source_home/auth.json" "$home/auth.json"
+    fi
+    if test -f "$source_home/.env" && test ! -f "$home/.env"; then
+      install -o paperclip -g paperclip -m 0600 "$source_home/.env" "$home/.env"
+    fi
+    rm -f -- "$home/CREDENTIAL_REQUIRED"
+  done <"$registry"
 }
 
 create_or_update_core_agents() {
@@ -450,7 +476,7 @@ create_or_update_core_agents() {
     mv -f "$next" "$tmp"
     test "$slug" != agency-director || director_id=$agent_id
   done <"$registry"
-  test "$(jq 'length' "$tmp")" -eq 8
+  test "$(jq 'length' "$tmp")" -eq 12
   install -o root -g root -m 0600 "$tmp" "$core_ids"
   rm -f "$tmp"
 }
@@ -459,7 +485,7 @@ activate() {
   local already_active=false activation_mode=activate
   test -f /var/lib/paperclip-appliance/complete || { echo "appliance is not initialized" >&2; exit 69; }
   test -f "$registry" || { echo "Core role registry is missing" >&2; exit 69; }
-  test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 8
+  test "$(awk -F '\t' '$1 !~ /^#/ && NF {n++} END {print n+0}' "$registry")" -eq 12
   install -d -o root -g root -m 0700 "$state"
   require_quiescent
   if test -f "$status_file" && test "$(jq -r '.status' "$status_file")" = active; then
@@ -495,12 +521,16 @@ activate() {
   create_or_update_core_agents
   if test "$already_active" = false; then
     copy_existing_credential
-  fi
-  perform_activation_cutover "$activation_mode"
-  if test "$already_active" = true; then
-    echo "Eight Core roles reconciled to the reviewed release; run sudo ./verify.sh"
   else
-    echo "Eight Core roles activated; run sudo ./verify.sh"
+    fill_missing_core_credentials
+  fi
+  validate_current_core_credentials
+  perform_activation_cutover "$activation_mode"
+  /opt/paperclip/ops/agency-os-activate >/dev/null
+  if test "$already_active" = true; then
+    echo "Twelve Agency OS roles reconciled to the reviewed release; run sudo ./verify.sh"
+  else
+    echo "Twelve Agency OS roles activated; run sudo ./verify.sh"
   fi
 }
 

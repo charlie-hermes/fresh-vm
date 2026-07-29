@@ -65,7 +65,7 @@ or replace an acceptance gate to make a rerun pass.
 - Preserve strict local secret encryption, JWT legacy-fallback denial, the
   Docker egress policy, and global concurrency cap.
 - VM snapshots, backups, and recovery stay under the human VM owner's control.
-- Functional runs must be performed by all eight Core employees from reset
+- Functional runs must be performed by all 12 Agency OS employees from reset
   sessions and independently inspected from the host. Static checks or file
   presence alone are not acceptance.
 - Never commit credentials, generated instance data, evidence, or backup

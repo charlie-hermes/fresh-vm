@@ -1,0 +1,26 @@
+[Unit]
+Description=Agency OS read-only operator portal
+After=network-online.target paperclip.service
+Wants=network-online.target
+Requires=paperclip.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/paperclip/operator.env
+WorkingDirectory=/opt/agency-os/current
+ExecStart=/usr/bin/python3 -m agency_os.operator_portal --config /etc/agency-os/operator-portal.json --serve --host 127.0.0.1 --port 3180
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

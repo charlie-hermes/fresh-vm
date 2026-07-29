@@ -1,0 +1,33 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+# shellcheck disable=SC1091
+. "$repo/appliance.lock"
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+target_root=/opt/agency-os
+target=$target_root/$AGENCY_OS_COMMIT
+install -d -o root -g root -m 0755 "$target_root"
+if test ! -d "$target/.git"; then
+  test ! -e "$target" || rmdir "$target"
+  git clone --filter=blob:none "$AGENCY_OS_REPOSITORY" "$target"
+fi
+test "$(git -C "$target" remote get-url origin)" = "$AGENCY_OS_REPOSITORY" || {
+  echo "Agency OS origin mismatch" >&2
+  exit 1
+}
+if ! git -C "$target" cat-file -e "$AGENCY_OS_COMMIT^{commit}" 2>/dev/null; then
+  git -C "$target" fetch origin "$AGENCY_OS_COMMIT"
+fi
+git -C "$target" checkout --detach "$AGENCY_OS_COMMIT"
+test "$(git -C "$target" rev-parse HEAD)" = "$AGENCY_OS_COMMIT"
+(cd "$target" && ./scripts/verify >/dev/null)
+chown -R root:root "$target"
+find "$target" -type d -exec chmod go-w {} +
+find "$target" -type f -exec chmod go-w {} +
+next_link=$target_root/.current.$$
+ln -s "$target" "$next_link"
+mv -Tf "$next_link" "$target_root/current"
+printf '%s\n' "$AGENCY_OS_COMMIT"

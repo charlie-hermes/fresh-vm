@@ -19,14 +19,14 @@ Dependencies should use `blockedByIssueIds`. Managers create child issues with `
 
 ## Employee hierarchy
 
-Every Core employee is a protected Paperclip assignment target. The Agency
-Director is the only Core employee with the explicit assignment grant. It cannot
+Every Agency OS employee is a protected Paperclip assignment target. The Agency
+Director is the only employee with the explicit assignment grant. It cannot
 create agents or skills, change the appliance, resolve its own approval, or act
-as a specialist. The other seven Core roles have no assignment grant and cannot
+as a specialist. The other 11 roles have no assignment grant and cannot
 create agents or skills. Every employee has `maxConcurrentRuns=1`; the VM-wide
 scheduler cap remains two.
 
-The eight profiles have distinct Hermes homes, workspaces, exact
+The 12 profiles have distinct Hermes homes, workspaces, exact
 `AGENTS.md`/`SOUL.md` role bundles, session/memory stores, sandbox homes, and
 Docker reuse identities. They use separate filesystem copies of the same
 provisioned provider credential. That is filesystem isolation, not
@@ -39,12 +39,16 @@ dependencies, review, and approval records—not by giving specialists general
 delegation authority. The active roles are:
 
 - Agency Director
+- Technical Implementation Specialist
+- Platform Assurance Reviewer
 - Brand and Brief Steward
 - Search and Content Strategist
 - Content Producer
 - Search and Answer Optimiser
 - Editorial Integrity QA
+- Visual and Creative Specialist
 - Publishing Operator
+- Social Amplifier
 - Growth Intelligence Analyst
 
 ## Normal operating loop

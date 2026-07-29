@@ -1,0 +1,44 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+lock=/opt/paperclip/integration/build/appliance.lock
+# shellcheck disable=SC1091
+. "$lock"
+target=/opt/agency-os/$AGENCY_OS_COMMIT
+test "$(git -C "$target" rev-parse HEAD)" = "$AGENCY_OS_COMMIT"
+test "$(sha256sum /usr/local/bin/buzz | awk '{print $1}')" = \
+  "$AGENCY_OS_BUZZ_SHA256"
+company_id=$(tr -d '\n' </etc/paperclip/company-id)
+jq -en --arg id "$company_id" '$id | test("^[0-9a-f-]{36}$")' >/dev/null
+install -d -o root -g root -m 0700 /etc/agency-os
+config=$(mktemp /etc/agency-os/.operator-portal.XXXXXX)
+jq -n --arg base "http://$PAPERCLIP_GATEWAY:$PAPERCLIP_PORT" \
+  --arg company "$company_id" \
+  '{paperclip_base_url:$base,bindings:[{company_id:$company,
+    brand_id:"brand_agency_live",token_env:"PAPERCLIP_BOARD_API_KEY",
+    approval_ids:[]}]}' >"$config"
+chown root:root "$config"
+chmod 0600 "$config"
+mv -f "$config" /etc/agency-os/operator-portal.json
+systemctl daemon-reload
+systemctl enable --now agency-os-operator.service
+ready=false
+for _ in $(seq 1 30); do
+  if curl --fail --silent --max-time 2 \
+      http://127.0.0.1:3180/api/status |
+      jq -e '.authority=="paperclip" and .projection=="read_only" and
+        .admin.role_bundle_count==12' >/dev/null 2>&1; then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+"$ready" || {
+  systemctl status agency-os-operator.service --no-pager >&2 || true
+  echo "Agency OS operator portal did not become ready" >&2
+  exit 1
+}
+echo "Agency OS operator portal is ready on http://127.0.0.1:3180"

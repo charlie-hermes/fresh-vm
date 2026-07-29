@@ -24,9 +24,11 @@ No Hermes Gateway service exists and no `hermes_gateway` fallback is configured.
 
 ## Per-agent state
 
-The appliance creates exactly eight active Core profiles: `agency-director`,
+The appliance creates exactly 12 active Agency OS profiles: `agency-director`,
+`technical-implementation-specialist`, `platform-assurance-reviewer`,
 `brand-brief-steward`, `search-content-strategist`, `content-producer`,
-`search-answer-optimiser`, `editorial-integrity-qa`, `publishing-operator`, and
+`search-answer-optimiser`, `visual-creative-specialist`,
+`editorial-integrity-qa`, `social-amplifier`, `publishing-operator`, and
 `growth-intelligence-analyst`. Each uses:
 
 - Hermes home: `/var/lib/paperclip/agents/<slug>/home`
@@ -75,7 +77,7 @@ threshold.
 | Browser | Disabled for employee profiles | removed from role toolsets to avoid a host-side browsing path |
 | Web search | Host child under hardened service | DDGS via `web_search_hermes`; native extraction unavailable with DDGS |
 | MCP | Host stdio/HTTP child under hardened service | local echo server passed, then was unregistered |
-| Role context and skills | Exact checksum-bound SOUL/AGENTS bundle plus the common Paperclip employee skill; actions still follow the Docker boundary | eight fresh-process load proofs, managed-instruction parity, and eight live role certifications |
+| Role context and skills | Exact checksum-bound SOUL/AGENTS bundle plus the common Paperclip employee skill; actions still follow the Docker boundary | 12 fresh-process load proofs, managed-instruction parity, and 12 live role certifications |
 | Delegation | Host orchestration; child terminal/file/code tools use Docker | parallel child collision test passed after sync-lifecycle patch |
 | Memory/sessions/checkpoints | Agent-specific host profile | cross-process recall, resume, checkpoint restore passed |
 

@@ -156,41 +156,24 @@ create_agent() {
 }
 
 if [ ! -f /etc/paperclip/hermes-agent-ids.json ]; then
-  director_id=$(create_agent agency-director agency-director \
-    "Agency Director" ceo "Agency Director" "" \
-    "$factory_assets/core-roles/agency-director/AGENTS.md")
-  steward_id=$(create_agent brand-brief-steward brand-brief-steward \
-    "Brand and Brief Steward" pm "Brand and Brief Steward" "$director_id" \
-    "$factory_assets/core-roles/brand-brief-steward/AGENTS.md")
-  strategist_id=$(create_agent search-content-strategist search-content-strategist \
-    "Search and Content Strategist" researcher "Search and Content Strategist" \
-    "$director_id" "$factory_assets/core-roles/search-content-strategist/AGENTS.md")
-  producer_id=$(create_agent content-producer content-producer \
-    "Content Producer" designer "Content Producer" "$director_id" \
-    "$factory_assets/core-roles/content-producer/AGENTS.md")
-  optimiser_id=$(create_agent search-answer-optimiser search-answer-optimiser \
-    "Search and Answer Optimiser" researcher "Search and Answer Optimiser" \
-    "$director_id" "$factory_assets/core-roles/search-answer-optimiser/AGENTS.md")
-  editorial_id=$(create_agent editorial-integrity-qa editorial-integrity-qa \
-    "Editorial Integrity QA" qa "Editorial Integrity QA" "$director_id" \
-    "$factory_assets/core-roles/editorial-integrity-qa/AGENTS.md")
-  publishing_id=$(create_agent publishing-operator publishing-operator \
-    "Publishing Operator" devops "Publishing Operator" "$director_id" \
-    "$factory_assets/core-roles/publishing-operator/AGENTS.md")
-  growth_id=$(create_agent growth-intelligence-analyst growth-intelligence-analyst \
-    "Growth Intelligence Analyst" researcher "Growth Intelligence Analyst" \
-    "$director_id" "$factory_assets/core-roles/growth-intelligence-analyst/AGENTS.md")
-  jq -n --arg director "$director_id" --arg steward "$steward_id" \
-    --arg strategist "$strategist_id" --arg producer "$producer_id" \
-    --arg optimiser "$optimiser_id" --arg editorial "$editorial_id" \
-    --arg publishing "$publishing_id" --arg growth "$growth_id" \
-    '{"agency-director":$director,"brand-brief-steward":$steward,
-      "search-content-strategist":$strategist,"content-producer":$producer,
-      "search-answer-optimiser":$optimiser,"editorial-integrity-qa":$editorial,
-      "publishing-operator":$publishing,"growth-intelligence-analyst":$growth}' \
-    > "$bootstrap/hermes-agent-ids.json"
+  ids_file=$bootstrap/hermes-agent-ids.json
+  printf '{}\n' >"$ids_file"
+  director_id=
+  while IFS=$'\t' read -r slug name role title reports _; do
+    case "$slug" in ''|\#*) continue;; esac
+    reports_id=
+    test "$reports" = - || reports_id=$director_id
+    agent_id=$(create_agent "$slug" "$slug" "$name" "$role" "$title" \
+      "$reports_id" "$factory_assets/core-roles/$slug/AGENTS.md")
+    next_ids=$(mktemp "$bootstrap/.hermes-agent-ids.XXXXXX")
+    jq --arg slug "$slug" --arg id "$agent_id" \
+      '. + {($slug):$id}' "$ids_file" >"$next_ids"
+    mv -f "$next_ids" "$ids_file"
+    test "$slug" != agency-director || director_id=$agent_id
+  done <"$factory_assets/core-roles.tsv"
+  test "$(jq 'length' "$ids_file")" -eq 12
   install -o root -g root -m 0600 \
-    "$bootstrap/hermes-agent-ids.json" /etc/paperclip/hermes-agent-ids.json
+    "$ids_file" /etc/paperclip/hermes-agent-ids.json
   printf '%s\n' "$director_id" > /etc/paperclip/hermes-agent-id
   chmod 0600 /etc/paperclip/hermes-agent-id
 fi

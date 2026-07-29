@@ -71,5 +71,5 @@ PYVERIFY
       deniedToolsets:($deniedToolsets|split(","))}' <<<"$result" \
     >>"$work/results.jsonl"
 done <"$registry"
-jq -s 'if length==8 and all(.[];.pass==true) then . else error("runtime bundle verification failed") end' \
+jq -s 'if length==12 and all(.[];.pass==true) then . else error("runtime bundle verification failed") end' \
   "$work/results.jsonl"

@@ -11,7 +11,8 @@ case "$role" in
   operations-manager|research-strategy|production-specialist|qa-reviewer|\
 agency-director|brand-brief-steward|search-content-strategist|content-producer|\
 search-answer-optimiser|editorial-integrity-qa|publishing-operator|\
-growth-intelligence-analyst) ;;
+growth-intelligence-analyst|technical-implementation-specialist|\
+platform-assurance-reviewer|visual-creative-specialist|social-amplifier) ;;
   *) echo "invalid role pack" >&2; exit 64;;
 esac
 
@@ -24,7 +25,8 @@ role_is_core=false
 case "$role" in
   agency-director|brand-brief-steward|search-content-strategist|content-producer|\
 search-answer-optimiser|editorial-integrity-qa|publishing-operator|\
-growth-intelligence-analyst) role_is_core=true ;;
+growth-intelligence-analyst|technical-implementation-specialist|\
+platform-assurance-reviewer|visual-creative-specialist|social-amplifier) role_is_core=true ;;
 esac
 
 core_record=

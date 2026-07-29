@@ -39,10 +39,30 @@ expected_host=$(printf '%s\n' \
   '-A PAPERCLIP-HOST -j REJECT --reject-with icmp-port-unreachable')
 test "$($iptables -w -S PAPERCLIP-EGRESS)" = "$expected_egress"
 test "$($iptables -w -S PAPERCLIP-HOST)" = "$expected_host"
-test "$($iptables -w -S DOCKER-USER | sed -n '2p')" = \
-  "-A DOCKER-USER -s $subnet -j PAPERCLIP-EGRESS"
-test "$($iptables -w -S INPUT | sed -n '2p')" = \
-  "-A INPUT -s $subnet -j PAPERCLIP-HOST"
+docker_hook="-A DOCKER-USER -s $subnet -j PAPERCLIP-EGRESS"
+host_hook="-A INPUT -s $subnet -j PAPERCLIP-HOST"
+test "$($iptables -w -S DOCKER-USER | sed -n '2p')" = "$docker_hook"
+
+# Tailscale installs its own narrow INPUT hook at position one.  Permit that
+# one reviewed predecessor while keeping the Paperclip source-subnet hook ahead
+# of UFW and every other host rule.  Traffic from the Docker subnet does not
+# arrive on tailscale0 and must fall through ts-input into PAPERCLIP-HOST.
+first_input=$($iptables -w -S INPUT | sed -n '2p')
+case "$first_input" in
+  "$host_hook") ;;
+  '-A INPUT -j ts-input')
+    test "$($iptables -w -S INPUT | sed -n '3p')" = "$host_hook"
+    $iptables -w -C ts-input -i tailscale0 -j ACCEPT
+    if $iptables -w -S ts-input | grep -F -- "$subnet" >/dev/null; then
+      echo "Tailscale INPUT chain unexpectedly names the Paperclip subnet" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "unexpected rule before the Paperclip INPUT hook: $first_input" >&2
+    exit 1
+    ;;
+esac
 
 image=$(sed -n 's/^HERMES_DOCKER_IMAGE=//p' /opt/paperclip/integration/build/appliance.lock)
 /usr/bin/docker run --rm --network paperclip-hermes \

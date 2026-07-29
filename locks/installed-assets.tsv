@@ -11,7 +11,7 @@ a089594a127337e33813e19d7fc30e01ce54034201aaed905d66e85637a3d1de	files/ops/paper
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458	files/ops/paperclip-issue-update	/opt/paperclip/ops/paperclip-issue-update
 8304037e6e1ebfe9522564b33cbc66ceaa8082af6a40e118f435ae0b4761a657	files/ops/paperclip-network-policy	/opt/paperclip/ops/paperclip-network-policy
 b2b42ed870249c47ae1c5656f01da65f8cf90e2ee977bd63b615f13440214fd3	files/ops/paperclip-network-probe.py	/opt/paperclip/ops/paperclip-network-probe.py
-fee19889a1b10a4e28bb3401d34fed6c85e7dcf24c7d00986d61e8b30e5f0657	files/ops/paperclip-network-verify	/opt/paperclip/ops/paperclip-network-verify
+5d49907c696edede27b75a817727807cc12e6f94b41de9aa8134b7dcba5a564e	files/ops/paperclip-network-verify	/opt/paperclip/ops/paperclip-network-verify
 51c114ce26538347e7dd593dbffe1193d3e41a9ea93f1f9062d4ce222521005f	files/ops/paperclip-node-regression.mjs	/opt/paperclip/ops/paperclip-node-regression.mjs
 143eeb54397863e021765e61427d73c70642cb4b3675af166718308395b536af	files/ops/paperclip-offsite-sync.sh	/opt/paperclip/ops/paperclip-offsite-sync.sh
 415da4b0eeb0e34699864138a30535e7b404f7fdaff96f5e8acc4c99a98fa8c1	files/ops/paperclip-secret-audit.sh	/opt/paperclip/ops/paperclip-secret-audit.sh
@@ -87,4 +87,4 @@ a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-ro
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
 167da1caea1e9fecfbbff330c15445edbeda4f6d0f2a45f9cb3c1728492e153d	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-2f82fc5d1759b92eb7ffc7c71397936d29032b2dd17cb2b9d856b1d3d72fe7d1	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+027b7dac5067301320c60b52972a5168ca33c5bf15b25284dc68ff238f3c4991	appliance.lock	/opt/paperclip/integration/build/appliance.lock

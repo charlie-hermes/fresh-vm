@@ -70,7 +70,7 @@ employee mutation. A recoverable
 failure restores that snapshot, the Core identity map, and the prior transition
 status; a later retry also restores a snapshot left by `SIGKILL` before retrying.
 
-Do not report activation complete until all five release lines pass.
+Do not report activation complete until all six release lines pass.
 
 ## What acceptance proves
 

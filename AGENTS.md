@@ -4,11 +4,12 @@
 
 Turn one clean, manually created Ubuntu 24.04 amd64 VM into the locked
 Hermes/Paperclip/Docker appliance defined by this repository. Completion means
-`sudo ./verify.sh` prints all five release gates:
+`sudo ./verify.sh` prints all six release gates:
 
 ```text
 PLATFORM: PASS
 FUNCTIONAL ACCEPTANCE: PASS
+AGENCY OS: LIVE
 SECRET AUDIT: PASS
 SYSTEMD FAILED UNITS: 0
 PRODUCTION: READY

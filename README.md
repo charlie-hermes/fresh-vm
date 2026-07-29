@@ -21,6 +21,7 @@ Success is exactly:
 ```text
 PLATFORM: PASS
 FUNCTIONAL ACCEPTANCE: PASS
+AGENCY OS: LIVE
 SECRET AUDIT: PASS
 SYSTEMD FAILED UNITS: 0
 PRODUCTION: READY
@@ -84,7 +85,7 @@ One-time operator details are stored root-only at
    VM-wide concurrency limit.
 5. **Release.** The same command scans persisted files and run logs for actual
    credential values, runs the proprietary regression suite, checks every
-   systemd unit, and emits the five release gates.
+   systemd unit, and emits the six release gates.
 
 ## Reproducibility and idempotency
 

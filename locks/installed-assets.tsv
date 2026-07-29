@@ -1,5 +1,5 @@
-adee18832c855f6567a9eec09f5ed5cabd2ba2bdfce18a6dc00b10ed19bb8647	files/ops/agency-os-activate	/opt/paperclip/ops/agency-os-activate
-06b177fd3365a567032a2687043b3b2bb974ec909234c381ee3b980820bb728f	files/ops/agency-os-g2-verify	/opt/paperclip/ops/agency-os-g2-verify
+50fd8cc7833956ea06c1b8f79261e976db0dfbbc3d1131fe28504c05ca002f95	files/ops/agency-os-activate	/opt/paperclip/ops/agency-os-activate
+3ef8b97b9fdc954ec53396da30460537ad2f5d5257196a5ab3f1244aab27f201	files/ops/agency-os-g2-verify	/opt/paperclip/ops/agency-os-g2-verify
 96501c4620dbd5bcf12e8ce9a580aac3a6c899fbd4ebebfbc5ea769a30107572	files/ops/agency-os-live-acceptance	/opt/paperclip/ops/agency-os-live-acceptance
 e78424424d1e7acc7fa6b7b94754735fff615ee8104d86328d6fdc67ad3cfc92	files/ops/paperclip-api	/opt/paperclip/ops/paperclip-api
 eeb66da8dadb451095b7d0da816f9ddec5b6a843fda1b10139485b760c7cbd35	files/ops/paperclip-backup.sh	/opt/paperclip/ops/paperclip-backup.sh
@@ -90,4 +90,4 @@ a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-ro
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
 6eb7e4b187e7d6b8ea243d78585adf45de3456a6dc4b24dfbd56cd68435545ee	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-7f14b5fea4ba7f08f46faaae2032a946ad9acd9c3621d7b0988cec0d1f9fdcb9	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+7a8caab1b5aaf95cabb2f2170d9c66000fa5f3af54c37ca8467dd02cc7030c25	appliance.lock	/opt/paperclip/integration/build/appliance.lock

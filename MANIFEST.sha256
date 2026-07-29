@@ -5,7 +5,7 @@ bb9d04b2a461744de23f0854525d0bc8f8ad490d13e24e2742429b88a4f3ee0d  ./AGENTS.md
 d61a1db31017aa5a2601548678ea607c31341234778e3212e30c8569ddef4afa  ./LICENSE
 cd101d241c6bd9fb6308c5b540a3ecf02f2d6d57dfa4ad86c4b6141b8601f820  ./README.md
 2dec6555d199dead2c6b610a8597b8d8a511b0675743f0362d8b8b560b6cea79  ./THIRD_PARTY_NOTICES.md
-7f14b5fea4ba7f08f46faaae2032a946ad9acd9c3621d7b0988cec0d1f9fdcb9  ./appliance.lock
+7a8caab1b5aaf95cabb2f2170d9c66000fa5f3af54c37ca8467dd02cc7030c25  ./appliance.lock
 1ffad9958b7a86f719532df465f249f107b32bcff5c0a322e54f815572968fd0  ./bootstrap.sh
 a2ab1a7254a68a907329915837fd2a7c7ec500a02d50b06c7509a9ad18dd3dc4  ./configure-secrets.sh
 3984eb0cf601acd8f52370e5ee6713a5c112a946b21cb96950dc52eda0daa199  ./docs/agency-os-operating-guide.md
@@ -53,8 +53,8 @@ b48ee3d06f99933820d1f1de5661d9ef62e3f0205e7829996fbaf761571e1aee  ./files/factor
 c4054d3791e8d071eff14dce6374d92a7659a4b3b86e4585d12c886fa986248d  ./files/factory/skills/paperclip-employee/scripts/paperclip-checkout
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458  ./files/factory/skills/paperclip-employee/scripts/paperclip-issue-update
 f34cf18da88a1c76e75a2ff8c659ed89c2412b482c1efa69519664206e6aeb8a  ./files/factory/skills/paperclip-employee/scripts/paperclip-upload-artifact.sh
-adee18832c855f6567a9eec09f5ed5cabd2ba2bdfce18a6dc00b10ed19bb8647  ./files/ops/agency-os-activate
-06b177fd3365a567032a2687043b3b2bb974ec909234c381ee3b980820bb728f  ./files/ops/agency-os-g2-verify
+50fd8cc7833956ea06c1b8f79261e976db0dfbbc3d1131fe28504c05ca002f95  ./files/ops/agency-os-activate
+3ef8b97b9fdc954ec53396da30460537ad2f5d5257196a5ab3f1244aab27f201  ./files/ops/agency-os-g2-verify
 96501c4620dbd5bcf12e8ce9a580aac3a6c899fbd4ebebfbc5ea769a30107572  ./files/ops/agency-os-live-acceptance
 e78424424d1e7acc7fa6b7b94754735fff615ee8104d86328d6fdc67ad3cfc92  ./files/ops/paperclip-api
 eeb66da8dadb451095b7d0da816f9ddec5b6a843fda1b10139485b760c7cbd35  ./files/ops/paperclip-backup.sh
@@ -96,7 +96,7 @@ ae079d8c6a8029d5b9952257791398897f580ccf231b290a37756f754412ce05  ./files/system
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84  ./files/systemd/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f  ./files/systemd/paperclip.service
 6b535ca10a989773521086ae80eb7ab90fdc6da1cae757e46f723be822b522c7  ./locks/hermes-ddgs.requirements.txt
-59775da26cb0780578e19219973fe89377333b1abca75e40f8aa6725fa72e4aa  ./locks/installed-assets.tsv
+1c0392949c7508c20eeff6c18b11d4d667e840abfb60fcb9d9540940a086ba74  ./locks/installed-assets.tsv
 974cf04cdd2f3e2fb8e55c7cc5f310842cc5fe48ae3e64bb80bab940c0de5331  ./locks/overlays.tsv
 209fa78fa15b073880c1b9466214bd9ba38c39f8cac12e62ea6aadec55386536  ./locks/paperclip/package-lock.json
 3b5f830e5b9023f4a03699827fa82f7add4f0334b8ed34c28b6104a44a19fde8  ./locks/paperclip/package.json

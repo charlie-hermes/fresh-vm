@@ -3,6 +3,8 @@ set -Eeuo pipefail
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 test "$(id -u)" -eq 0 || { echo "agency-os-g2-verify must run as root" >&2; exit 77; }
+# shellcheck disable=SC1091
+. /opt/paperclip/integration/build/appliance.lock
 company_id=$(tr -d '\n' </etc/paperclip/company-id)
 company=$(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company_id")
 jq -e --arg id "$company_id" '
@@ -11,7 +13,7 @@ jq -e --arg id "$company_id" '
 
 test "$(stat -c '%a:%U' /var/lib/agency-os)" = "700:root"
 test "$(stat -c '%a:%U' /var/lib/agency-os/fleet-tenancy.sqlite3)" = "600:root"
-result=$(/usr/bin/python3 /opt/agency-os/current/scripts/verify_fleet_tenant.py \
+tenancy=$(/usr/bin/python3 /opt/agency-os/current/scripts/verify_fleet_tenant.py \
   --config /opt/agency-os/current/config/fleet-generation2.json \
   --database /var/lib/agency-os/fleet-tenancy.sqlite3 \
   --company-id-file /etc/paperclip/company-id)
@@ -19,6 +21,47 @@ jq -e --arg id "$company_id" '
   .status=="pass" and .schema_version==2 and .brand_id=="brand_fleet" and
   .tenant_id=="tenant_fleet" and .paperclip_company_id==$id and
   .hostnames==["fleet.madebyfleet.com"] and
-  .enabled_modules==["content_engine"] and (.disabled_modules|length)==7
-' <<<"$result" >/dev/null
-printf '%s\n' "$result"
+  .enabled_modules==["ai_market_observatory","brand_twin","content_engine"] and
+  (.disabled_modules|length)==5
+' <<<"$tenancy" >/dev/null
+
+test "$(stat -c '%a:%U' /var/lib/agency-os/fleet-brand-intelligence.sqlite3)" = "600:root"
+intelligence=$(/usr/bin/python3 \
+  /opt/agency-os/current/scripts/verify_fleet_brand_intelligence.py \
+  --database /var/lib/agency-os/fleet-brand-intelligence.sqlite3)
+jq -e '
+  .status=="pass" and .brand_id=="brand_fleet" and
+  .record_counts.brand_claim==8 and .record_counts.customer_mission==50 and
+  .record_counts.observation_run==2 and .record_counts.observation==40 and
+  .record_counts.market_finding==1 and .record_counts.remediation_proposal==1 and
+  .record_counts.experiment==1 and .record_counts.outcome_event==1 and
+  .launch_mission_count==20 and .external_ai_coverage=="unknown" and
+  .provider_external_writes==false
+' <<<"$intelligence" >/dev/null
+
+proof=/var/lib/paperclip-appliance/fleet-g2-brand-intelligence.json
+test "$(stat -c '%a:%U' "$proof")" = "600:root"
+jq -e --arg commit "$AGENCY_OS_COMMIT" --arg company "$company_id" '
+  .status=="pass" and .agency_os_commit==$commit and .company_id==$company and
+  .brand_id=="brand_fleet" and .paperclip_authenticated==true and
+  .buzz_authenticated==true and .provider_external_writes==false and
+  .enabled_modules==["ai_market_observatory","brand_twin","content_engine"] and
+  .brand_twin.approved_claim_count==8 and .brand_twin.mission_count==50 and
+  .brand_twin.launch_mission_count==20 and
+  .observatory.complete_run_count==2 and .observatory.observation_count==40 and
+  .observatory.finding_count==1 and .observatory.external_ai_coverage=="unknown" and
+  .closed_loop.paperclip_task_count==8 and .closed_loop.paperclip_tasks_done==true and
+  .closed_loop.publisher_calls==1 and .closed_loop.external_writes==false
+' "$proof" >/dev/null
+proof_summary=$(jq -c '{status,agency_os_commit,brand_id,enabled_modules,
+  brand_twin:{approved_claim_count:.brand_twin.approved_claim_count,
+    mission_count:.brand_twin.mission_count,launch_mission_count:.brand_twin.launch_mission_count},
+  observatory:{complete_run_count:.observatory.complete_run_count,
+    observation_count:.observatory.observation_count,finding_count:.observatory.finding_count,
+    external_ai_coverage:.observatory.external_ai_coverage},
+  closed_loop:{paperclip_task_count:.closed_loop.paperclip_task_count,
+    paperclip_tasks_done:.closed_loop.paperclip_tasks_done,
+    publisher_calls:.closed_loop.publisher_calls,external_writes:.closed_loop.external_writes}}' "$proof")
+jq -cn --argjson tenancy "$tenancy" --argjson intelligence "$intelligence" \
+  --argjson proof "$proof_summary" \
+  '{status:"pass",tenancy:$tenancy,intelligence:$intelligence,proof:$proof}'

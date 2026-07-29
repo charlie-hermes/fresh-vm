@@ -17,6 +17,7 @@ install -d -o root -g root -m 0700 /var/lib/agency-os
 /usr/bin/python3 "$target/scripts/agency-os-fleet-g2-activate" >/dev/null
 /opt/paperclip/ops/agency-os-g2-verify >/dev/null
 /opt/paperclip/ops/agency-os-live-acceptance >/dev/null
+/opt/paperclip/ops/agency-os-brand-agent-activate >/dev/null
 proof=/var/lib/paperclip-appliance/fleet-g2-brand-intelligence.json
 publication_approval=$(jq -er '.closed_loop.publication_approval_id' "$proof")
 core_proof=/var/lib/paperclip-appliance/agency-os-production.json

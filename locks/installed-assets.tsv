@@ -1,5 +1,7 @@
-fb712c94db11c68780a173d6e7137711ba2063602f7ed24179bdf014ec58a8f7	files/ops/agency-os-activate	/opt/paperclip/ops/agency-os-activate
-3ef8b97b9fdc954ec53396da30460537ad2f5d5257196a5ab3f1244aab27f201	files/ops/agency-os-g2-verify	/opt/paperclip/ops/agency-os-g2-verify
+3159956450f893e7ba61594714bcea32bdaefe9a2526714d741a48f0a244e56b	files/ops/agency-os-activate	/opt/paperclip/ops/agency-os-activate
+324948a9e82c6d520c98ccaf2340b2bbf4ef7775018a07af6410bed8396b9c49	files/ops/agency-os-brand-agent-activate	/opt/paperclip/ops/agency-os-brand-agent-activate
+747ef41ed73f9cf97722b017fe532f8a0e1ee1c8e7163224e6165ffc9745c640	files/ops/agency-os-brand-agent-verify	/opt/paperclip/ops/agency-os-brand-agent-verify
+3098d1df0ac2cb9495ba5c39696fc652b3f472210ca4f2b89cee9135fc730230	files/ops/agency-os-g2-verify	/opt/paperclip/ops/agency-os-g2-verify
 8d61b29b9cfcb07986f7e995b780e33c61ace3cd94379f5bbc450eaa17005865	files/ops/agency-os-live-acceptance	/opt/paperclip/ops/agency-os-live-acceptance
 e78424424d1e7acc7fa6b7b94754735fff615ee8104d86328d6fdc67ad3cfc92	files/ops/paperclip-api	/opt/paperclip/ops/paperclip-api
 eeb66da8dadb451095b7d0da816f9ddec5b6a843fda1b10139485b760c7cbd35	files/ops/paperclip-backup.sh	/opt/paperclip/ops/paperclip-backup.sh
@@ -22,6 +24,7 @@ c67dde0e148aa6a4a94959ab8f197db37731252fa35cfd0bdd4aba16f65dff8f	files/ops/paper
 f34cf18da88a1c76e75a2ff8c659ed89c2412b482c1efa69519664206e6aeb8a	files/ops/paperclip-upload-artifact	/opt/paperclip/ops/paperclip-upload-artifact
 41eb61ece1bfabfe46d21c233e305a194b36bc070c74263ca36227b383ca8e65	files/ops/paperclip-validate-remote-mount	/opt/paperclip/ops/paperclip-validate-remote-mount
 6091214434de196d9595bc8047b6e07e6d0d65f009a5ed117cfb9863287a6e18	files/ops/paperclip-verify-encrypted-backup.sh	/opt/paperclip/ops/paperclip-verify-encrypted-backup.sh
+84e9f9375edd9a216a6b351c4b6450bbb7397da8b435efed8d01eaee07ee078b	files/systemd/agency-os-brand-agent.service	/etc/systemd/system/agency-os-brand-agent.service
 fdaece8aaa51db5b5852604664caaf240ed064c10a8b432bff58744b575bc458	files/systemd/agency-os-operator.service	/etc/systemd/system/agency-os-operator.service
 8720c8a0a5346721b76970e195d30411ca7d221e63e6e7e4c2acbf0778076d84	files/systemd/paperclip-backup.service	/etc/systemd/system/paperclip-backup.service
 c8886307ea7c3eeb756af69c129586867c1e7d246e184f2612a58552057e162b	files/systemd/paperclip-backup.timer	/etc/systemd/system/paperclip-backup.timer
@@ -89,5 +92,5 @@ e779da7c1860f11eeed85fed5dc640a025d4c94ff854cb2a25146eea75ea1226	scripts/credent
 a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-role-transition	/usr/local/sbin/paperclip-core-role-transition
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
-6eb7e4b187e7d6b8ea243d78585adf45de3456a6dc4b24dfbd56cd68435545ee	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-c54b253e64fa4ef3940729caa07b9e286136474b75f17d2a8c31742f03263275	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+de77c4fa5ef031bd7821b565e97ca631c3c3e1cd4ff759a8afb4ac5b222a6568	verify.sh	/usr/local/sbin/paperclip-appliance-verify
+4784ea027658fb0135f65fb9d3a656523ea8f10a3c039ed0e7ae247c7caa7a01	appliance.lock	/opt/paperclip/integration/build/appliance.lock

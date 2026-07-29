@@ -21,8 +21,9 @@ jq -e --arg id "$company_id" '
   .status=="pass" and .schema_version==2 and .brand_id=="brand_fleet" and
   .tenant_id=="tenant_fleet" and .paperclip_company_id==$id and
   .hostnames==["fleet.madebyfleet.com"] and
-  .enabled_modules==["ai_market_observatory","brand_twin","content_engine"] and
-  (.disabled_modules|length)==5
+  .enabled_modules==["ai_market_observatory","brand_agent","brand_twin",
+    "content_engine","controlled_actions"] and
+  (.disabled_modules|length)==3
 ' <<<"$tenancy" >/dev/null
 
 test "$(stat -c '%a:%U' /var/lib/agency-os/fleet-brand-intelligence.sqlite3)" = "600:root"

@@ -22,6 +22,8 @@ verification_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 verification_result=/var/lib/paperclip-appliance/verification-result.json
 g2_result=null
 g2_result_checksum=
+brand_agent_result=null
+brand_agent_result_checksum=
 required_lines='["PLATFORM: PASS","FUNCTIONAL ACCEPTANCE: PASS","AGENCY OS: LIVE","SECRET AUDIT: PASS","SYSTEMD FAILED UNITS: 0","PRODUCTION: READY"]'
 write_verification_evidence() {
   exit_status=$?
@@ -53,15 +55,19 @@ write_verification_evidence() {
     --arg verifier_sha256 "$verifier_sha256" --arg appliance_lock_sha256 "$lock_sha256" \
     --arg installed_assets_sha256 "$assets_sha256" \
     --arg g2_result_checksum "$g2_result_checksum" \
+    --arg brand_agent_result_checksum "$brand_agent_result_checksum" \
     --argjson exit_status "$exit_status" --argjson output_lines "$output_lines" \
     --argjson required_lines "$required_lines" --argjson g2_summary "$g2_result" \
+    --argjson brand_agent_summary "$brand_agent_result" \
     '{schema_version:$schema_version,status:$status,exit_status:$exit_status,
       started_at:$started_at,completed_at:$completed_at,boot_id:$boot_id,
       output_lines:$output_lines,required_lines:$required_lines,
       agency_os_commit:$agency_os_commit,verifier_sha256:$verifier_sha256,
       appliance_lock_sha256:$appliance_lock_sha256,
       installed_assets_sha256:$installed_assets_sha256,
-      g2_result_checksum:$g2_result_checksum,g2_summary:$g2_summary}' >"$temporary"
+      g2_result_checksum:$g2_result_checksum,g2_summary:$g2_summary,
+      brand_agent_result_checksum:$brand_agent_result_checksum,
+      brand_agent_summary:$brand_agent_summary}' >"$temporary"
   chmod 0600 "$temporary"
   chown root:root "$temporary"
   mv -f "$temporary" "$verification_result"
@@ -311,6 +317,9 @@ jq -e --arg commit "$AGENCY_OS_COMMIT" \
   fail "Agency OS live workflow evidence"
 g2_result=$(/opt/paperclip/ops/agency-os-g2-verify) || fail "Fleet G2 live foundation"
 g2_result_checksum=$(printf '%s' "$g2_result" | sha256sum | awk '{print $1}')
+brand_agent_result=$(/opt/paperclip/ops/agency-os-brand-agent-verify) ||
+  fail "Fleet Brand Agent G2.5"
+brand_agent_result_checksum=$(printf '%s' "$brand_agent_result" | sha256sum | awk '{print $1}')
 portal=$(curl --fail --silent --show-error --max-time 5 \
   http://127.0.0.1:3180/api/status) || fail "Agency OS operator portal health"
 jq -e '.authority=="paperclip" and .projection=="read_only" and

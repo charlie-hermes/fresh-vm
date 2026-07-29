@@ -193,6 +193,8 @@ platform_check() {
     /etc/paperclip/paperclip.env || fail "legacy JWT fallback"
   test "$(stat -c '%a:%U' /etc/paperclip/operator.env)" = "600:root" ||
     fail "operator credential permissions"
+  /usr/local/sbin/fleet-portal-paperclip-sync --verify-only >/dev/null ||
+    fail "Fleet G2.6 Paperclip task graph"
 
   company_id=$(tr -d '\n' </etc/paperclip/company-id)
   agents=$(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company_id/agents")

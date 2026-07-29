@@ -58,6 +58,9 @@ if test -s /etc/paperclip/company-id; then
   install -o root -g root -m 0600 "$temporary" /etc/agency-os/fleet-command-worker.env
   rm -f -- "$temporary"
 fi
+if test -s /etc/paperclip/operator.env && test -s /etc/paperclip/company-id; then
+  "$repo/scripts/fleet-portal-paperclip-sync" >/dev/null
+fi
 
 for unit in "$repo"/files/systemd/fleet-portal-*.service \
   "$repo"/files/systemd/fleet-ingest-worker.service; do
@@ -69,6 +72,8 @@ install -o root -g root -m 0755 "$repo/scripts/fleet-portal-install" \
   /usr/local/sbin/fleet-portal-install
 install -o root -g root -m 0755 "$repo/scripts/fleet-portal-mutations" \
   /usr/local/sbin/fleet-portal-mutations
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-paperclip-sync" \
+  /usr/local/sbin/fleet-portal-paperclip-sync
 install -o root -g root -m 0644 "$repo/docs/fleet-portal-operations.md" \
   /opt/paperclip/integration/docs/fleet-portal-operations.md
 install -o root -g root -m 0644 "$repo/appliance.lock" \

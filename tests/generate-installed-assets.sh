@@ -29,5 +29,6 @@ emit scripts/agency-os-install /usr/local/sbin/agency-os-install
 emit scripts/fleet-portal-install /usr/local/sbin/fleet-portal-install
 emit scripts/fleet-portal-configure /usr/local/sbin/fleet-portal-configure
 emit scripts/fleet-portal-mutations /usr/local/sbin/fleet-portal-mutations
+emit scripts/fleet-portal-paperclip-sync /usr/local/sbin/fleet-portal-paperclip-sync
 emit verify.sh /usr/local/sbin/paperclip-appliance-verify
 emit appliance.lock /opt/paperclip/integration/build/appliance.lock

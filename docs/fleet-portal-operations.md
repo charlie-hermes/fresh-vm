@@ -15,6 +15,10 @@ G2.6 runs four separate services:
 - `fleet-ingest-worker.service` scans and extracts uploads without network
   access. Its output always requires review.
 
+The installer also synchronises the bounded `FL2-80A` through `FL2-80D`
+Paperclip task graph. `FL2-90` remains blocked by `FL2-80D`; installing the
+portal never starts the first external client gate.
+
 Paperclip remains private at `172.30.0.1:3100`. The client portal must be
 reached through Cloudflare Access and a Cloudflare Tunnel to the loopback web
 service. Do not publish port 3190 directly.

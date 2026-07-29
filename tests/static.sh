@@ -109,6 +109,8 @@ grep -q 'npm ci --prefix fleet-portal' scripts/agency-os-install
 grep -q 'chmod -R a+rX,u+w,go-w "$target"' scripts/agency-os-install
 grep -q '/opt/paperclip/integration/build/appliance.lock' scripts/fleet-portal-install
 grep -q '/usr/local/sbin/paperclip-appliance-verify' scripts/fleet-portal-install
+grep -q 'fleet-portal-paperclip-sync' scripts/fleet-portal-install
+grep -q 'fleet-portal-paperclip-sync --verify-only' verify.sh
 for field in verification-result.json output_lines required_lines exit_status \
   verifier_sha256 appliance_lock_sha256 installed_assets_sha256 g2_summary brand_agent_summary; do
   grep -q "$field" verify.sh

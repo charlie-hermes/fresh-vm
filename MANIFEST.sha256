@@ -56,7 +56,7 @@ f34cf18da88a1c76e75a2ff8c659ed89c2412b482c1efa69519664206e6aeb8a  ./files/factor
 3159956450f893e7ba61594714bcea32bdaefe9a2526714d741a48f0a244e56b  ./files/ops/agency-os-activate
 324948a9e82c6d520c98ccaf2340b2bbf4ef7775018a07af6410bed8396b9c49  ./files/ops/agency-os-brand-agent-activate
 747ef41ed73f9cf97722b017fe532f8a0e1ee1c8e7163224e6165ffc9745c640  ./files/ops/agency-os-brand-agent-verify
-3098d1df0ac2cb9495ba5c39696fc652b3f472210ca4f2b89cee9135fc730230  ./files/ops/agency-os-g2-verify
+bbde8d037c19625840f304ca3e6bd99abfd77295463ada374dba18cae8f2fccd  ./files/ops/agency-os-g2-verify
 8d61b29b9cfcb07986f7e995b780e33c61ace3cd94379f5bbc450eaa17005865  ./files/ops/agency-os-live-acceptance
 e78424424d1e7acc7fa6b7b94754735fff615ee8104d86328d6fdc67ad3cfc92  ./files/ops/paperclip-api
 eeb66da8dadb451095b7d0da816f9ddec5b6a843fda1b10139485b760c7cbd35  ./files/ops/paperclip-backup.sh
@@ -99,7 +99,7 @@ ae079d8c6a8029d5b9952257791398897f580ccf231b290a37756f754412ce05  ./files/system
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84  ./files/systemd/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f  ./files/systemd/paperclip.service
 6b535ca10a989773521086ae80eb7ab90fdc6da1cae757e46f723be822b522c7  ./locks/hermes-ddgs.requirements.txt
-1acd1bc0b3840c8cfaab927950e7f123e2229367a5f4b60b2360cf64319c5083  ./locks/installed-assets.tsv
+47bc53bfd1d2ebf0546a6d747d933c2cd082e12f3882c281395d34905030fac0  ./locks/installed-assets.tsv
 974cf04cdd2f3e2fb8e55c7cc5f310842cc5fe48ae3e64bb80bab940c0de5331  ./locks/overlays.tsv
 209fa78fa15b073880c1b9466214bd9ba38c39f8cac12e62ea6aadec55386536  ./locks/paperclip/package-lock.json
 3b5f830e5b9023f4a03699827fa82f7add4f0334b8ed34c28b6104a44a19fde8  ./locks/paperclip/package.json

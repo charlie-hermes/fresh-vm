@@ -10,6 +10,7 @@ a089594a127337e33813e19d7fc30e01ce54034201aaed905d66e85637a3d1de	files/ops/paper
 09ac8a59bb324b4caec335bdc9ebc0f9b3fca8513cc6ecae2d34879301a8b090	files/ops/paperclip-http-denial-check	/opt/paperclip/ops/paperclip-http-denial-check
 6be93b31fd592a71af0f90eccc6bfd82be14fc705b3359b92bf9859e007b3615	files/ops/paperclip-integration-regression	/opt/paperclip/ops/paperclip-integration-regression
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458	files/ops/paperclip-issue-update	/opt/paperclip/ops/paperclip-issue-update
+2c44e596f31651e29aa15570d550b0eb2db6c967c7eeb6157c036877438d11e3	files/ops/paperclip-network-after-tailscale	/opt/paperclip/ops/paperclip-network-after-tailscale
 e328a611531bd84cf7eb67e44d62d25bb937b250abbddf0d5f71ff884b66cfc5	files/ops/paperclip-network-policy	/opt/paperclip/ops/paperclip-network-policy
 1c8e265abd05ce84d28966c7efdd4d7f675d4300dd82bd4d4e93340fd62f6fe3	files/ops/paperclip-network-probe.py	/opt/paperclip/ops/paperclip-network-probe.py
 062772e77e930b26fd17153f484c63ac74a45e376f1e12642f6c6cf39c199289	files/ops/paperclip-network-verify	/opt/paperclip/ops/paperclip-network-verify
@@ -32,7 +33,7 @@ ae079d8c6a8029d5b9952257791398897f580ccf231b290a37756f754412ce05	files/systemd/p
 606bbcfbe6617a8b982c42b06e8ea4c27fd6e1dd25cfaa88a888699524913975	files/systemd/paperclip-soak-sample.service	/etc/systemd/system/paperclip-soak-sample.service
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84	files/systemd/paperclip-soak-sample.timer	/etc/systemd/system/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f	files/systemd/paperclip.service	/etc/systemd/system/paperclip.service
-9708035a18510d1a55e887287c4014ea20f0a845706656e0757101a6bf3e86ce	files/systemd-dropins/tailscaled-paperclip-network-policy.conf	/etc/systemd/system/tailscaled.service.d/paperclip-network-policy.conf
+8fdee08b243411fdd266adb11fb4cf668231be15b863c5adcbbeaa66dbff61eb	files/systemd-dropins/tailscaled-paperclip-network-policy.conf	/etc/systemd/system/tailscaled.service.d/paperclip-network-policy.conf
 3984eb0cf601acd8f52370e5ee6713a5c112a946b21cb96950dc52eda0daa199	docs/agency-os-operating-guide.md	/opt/paperclip/integration/docs/agency-os-operating-guide.md
 0a038bd6df7d14de52c64b5da700a5339ebef85d894b6af4d228398c3a37ac6c	docs/architecture-security.md	/opt/paperclip/integration/docs/architecture-security.md
 024b142e0db4e6c119cf2a9b8628e0e6c0662578e6d4a144365a3eb5387f5666	docs/backup-restore.md	/opt/paperclip/integration/docs/backup-restore.md

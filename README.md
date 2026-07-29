@@ -52,11 +52,11 @@ sudo env PAPERCLIP_COMPANY_NAME="Client Name" ./bootstrap.sh
 - embedded PostgreSQL bound to `127.0.0.1:54329`;
 - Hermes `0.19.0` at commit
   `7de554277de632364c74fcf8641daa58a9a977d9`;
+- Agency OS at its exact reviewed commit, with Core, Social, provider handoffs,
+  two-brand isolation checks, and a loopback-only read-only operator portal;
 - a digest-pinned Python/Node Docker sandbox and isolated Docker bridge;
-- the eight approved Agency Core employees—Agency Director, Brand and Brief
-  Steward, Search and Content Strategist, Content Producer, Search and Answer
-  Optimiser, Editorial Integrity QA, Publishing Operator, and Growth
-  Intelligence Analyst—each with a separate Hermes home, workspace, exact
+- all 12 approved Agency OS employees, each with a separate Hermes home,
+  workspace, exact
   checksum-bound role bundle, persistent container identity, memory, and session;
 - host firewall rules denying sandbox access to private/metadata networks,
   except the authenticated Paperclip route;
@@ -76,7 +76,7 @@ One-time operator details are stored root-only at
    policy, and creates a unique initialized appliance.
 3. **Integrate secrets.** `configure-secrets.sh` validates and installs the
    provider credential.
-4. **Accept.** `verify.sh` makes all eight Core profiles execute
+4. **Accept.** `verify.sh` makes all 12 Agency OS profiles execute
    role-appropriate Paperclip tasks from reset sessions. It independently
    verifies exact Hermes `SOUL.md`/`AGENTS.md` loading, managed-instruction
    parity, denied toolsets, identity attribution, approved search, every
@@ -105,8 +105,8 @@ Start with:
 
 - `docs/architecture-security.md`
 - `docs/core-role-activation.md`
+- `docs/agency-os-operating-guide.md`
 - `docs/operations-runbook.md`
-- `docs/backup-restore.md`
 - `docs/rollback.md`
 
 Bootstrap logs are in `/var/log/paperclip-appliance/bootstrap.log`. Service

@@ -20,7 +20,7 @@ sudo find /var/lib/paperclip/backups -maxdepth 2 -type f -printf '%TY-%Tm-%Td %T
 
 - Consistent Paperclip SQL/database backup from `paperclipai db:backup`.
 - Full non-database instance state, including managed instructions and metadata; transient instance logs are excluded.
-- All eight active Core Hermes employee homes, plus retained paused legacy
+- All 12 active Agency OS Hermes employee homes, plus retained paused legacy
   homes during an upgrade: sessions, SQLite state, memory, checkpoints, skill
   state, and sandbox-home state.
 - All employee workspaces and acceptance evidence.

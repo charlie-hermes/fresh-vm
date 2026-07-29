@@ -57,9 +57,9 @@ this project. The bundled backup tools remain available for optional manual use,
 but their services and timers are disabled by default and are not release
 requirements.
 
-## Changing or upgrading the eight-role factory
+## Changing or upgrading the 12-role factory
 
-The released appliance verifies exactly eight active Core profiles. Adding,
+The released appliance verifies exactly 12 active Agency OS profiles. Adding,
 removing, renaming, or re-authorising a role is a factory change, not an ad-hoc
 production operation: update the registry, initializer, profile builder,
 credential installer, functional acceptance, exact-count
@@ -74,9 +74,10 @@ sudo ./verify.sh
 ```
 
 The transition refuses live runs/containers, preserves the legacy identity map,
-installs checksum-locked assets, and pauses the eight new profiles while they
-are prepared. It verifies legacy credential copies without printing them, then
-atomically changes the active identity map. Legacy employees and profile data
+installs checksum-locked assets, and pauses the profiles while they are prepared.
+It adds the four newly approved profiles without printing or replacing the
+existing credential, then atomically changes the active identity map. Legacy
+employees and profile data
 are retained for rollback; they are not deleted.
 
 A runtime-only rollback is available after confirming the employee plane is

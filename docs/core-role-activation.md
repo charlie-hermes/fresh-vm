@@ -1,13 +1,13 @@
-# Agency Core role activation
+# Agency OS role activation
 
 ## Scope and provenance
 
-This release activates only the eight Agency Core roles. It does not activate
-Social Amplifier roles, real publishing/analytics providers, a full operator
-portal, or additional control-plane features.
+This release activates all 12 Agency OS roles, the Core and optional Social
+workflows, the read-only operator portal, and controlled provider handoffs.
+Real provider accounts remain manual until the owner supplies them.
 
 The role contracts were copied byte-for-byte from `agency-os` merge commit
-`d3eb353747323cc3f6a9a0622698737700693c94`. The authoritative per-file hashes
+`43da2e9a4df4cd957fa8cf2f2b7ec0ac70124d6f`. The authoritative per-file hashes
 are in `files/factory/core-roles.tsv`; repository, installed-asset, profile,
 Paperclip managed-bundle, and fresh-process Hermes checks all bind to those
 hashes.
@@ -15,15 +15,19 @@ hashes.
 | Role ID | Paperclip role | Reports to | Runtime authority |
 |---|---|---|---|
 | `agency-director` | `ceo` | board | may assign Core tasks; cannot create agents/skills or self-approve |
+| `technical-implementation-specialist` | `devops` | Agency Director | implements reviewed technical work; cannot deploy itself |
+| `platform-assurance-reviewer` | `qa` | board | independently verifies the platform; cannot modify or self-approve |
 | `brand-brief-steward` | `pm` | Agency Director | brief/evidence stewardship only |
 | `search-content-strategist` | `researcher` | Agency Director | approved public search and strategy |
 | `content-producer` | `designer` | Agency Director | sandboxed content production |
 | `search-answer-optimiser` | `researcher` | Agency Director | sandboxed search/answer optimisation |
 | `editorial-integrity-qa` | `qa` | Agency Director | independent review; no production authority |
+| `visual-creative-specialist` | `designer` | Agency Director | prepares visual packages through controlled manual handoff |
 | `publishing-operator` | `devops` | Agency Director | sandbox publication/reconciliation only |
+| `social-amplifier` | `pm` | Agency Director | creates approved social adaptations; no autonomous posting |
 | `growth-intelligence-analyst` | `researcher` | Agency Director | approved observation and analysis |
 
-Every Core employee target uses Paperclip's protected assignment policy. All
+Every Agency OS employee uses Paperclip's protected assignment policy. All
 specialists have no assignment grant, `canAssignTasks=false`,
 `canCreateAgents=false`, and `canCreateSkills=false`; the Agency Director alone
 has the explicit assignment grant represented by `canAssignTasks=true`. Every
@@ -42,10 +46,10 @@ Activation is a reviewed release operation, not normal employee work.
    sudo ./scripts/core-role-transition activate
    ```
 
-3. The command verifies the previous platform, records the legacy four-role
-   identity map, installs the locked release, creates or updates the eight
-   profiles while paused, verifies credentials, changes the active identity
-   map, resumes the Core roles, and resets every runtime session.
+3. The command verifies the current platform, records the existing identity
+   map, installs the locked release, creates or updates all 12 profiles while
+   paused, verifies credentials, changes the active identity map, starts the
+   operator portal, resumes the roles, and resets every runtime session.
 4. Reboot only if another configuration change requires it. Run:
 
    ```sh
@@ -56,8 +60,8 @@ Activation is a reviewed release operation, not normal employee work.
 transition status after `ERR`, `HUP`, `INT`, or `TERM` at every recoverable
 cutover checkpoint. `SIGKILL` cannot be trapped; after a killed transition,
 wait for all runs and containers to stop, then rerun the same `activate` or
-`rollback` command. Re-running `activate` against an active Core runtime first
-verifies the installed platform and validates the eight current Core credential
+`rollback` command. Re-running `activate` against an active Agency OS runtime
+first verifies the installed platform and validates the current credential
 copies without replacing them from the retained
 legacy profiles. It then snapshots the current Core Paperclip configuration,
 permissions, managed instructions, status, identity map, and managed profile
@@ -79,8 +83,8 @@ profile. It proves:
 - each registry-denied toolset is absent from the profile configuration;
 - no bundle is blocked or substituted by Hermes context discovery.
 
-Functional acceptance then resets all eight Paperclip runtime sessions and
-assigns all eight employees real, role-specific acceptance issues. Every role
+Functional acceptance then resets all 12 Paperclip runtime sessions and
+assigns all 12 employees real, role-specific acceptance issues. Every role
 must complete one allowed action from a deterministic fixture, explicitly
 refuse its nearest denied action, leave the prohibited artifact absent, create
 and read a mutually exclusive workspace sentinel inside its Docker identity,
@@ -103,9 +107,9 @@ queueing the remainder. The retained evidence records `allowedAction`,
 `roleBoundaryPass` for every role.
 
 This activates the runtime identities and their bounded local capabilities. It
-does not grant or claim real-client integrations, live publication authority,
-Social Amplifier operation, or capabilities deferred by the Agency OS delivery
-rebaseline.
+also runs the approved fictional Core and Social workflows through authenticated
+Paperclip and private Buzz. Real client publication still needs a connected
+provider and a new exact human approval.
 
 ## Rollback
 
@@ -119,4 +123,4 @@ The command pauses all Core roles, restores the legacy identity map, and resumes
 the legacy employees. New profiles are retained for investigation. Deploy the
 prior reviewed appliance commit immediately afterward; the current verifier
 intentionally will not certify a rolled-back four-role runtime as the current
-eight-role release.
+12-role release.

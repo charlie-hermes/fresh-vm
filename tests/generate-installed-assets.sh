@@ -23,5 +23,6 @@ emit scripts/profile-init /usr/local/sbin/paperclip-hermes-profile-init
 emit scripts/credential-install /usr/local/sbin/paperclip-hermes-credential-install
 emit scripts/core-role-transition /usr/local/sbin/paperclip-core-role-transition
 emit scripts/runtime-bundle-verify /opt/paperclip/ops/runtime-bundle-verify
+emit scripts/agency-os-install /usr/local/sbin/agency-os-install
 emit verify.sh /usr/local/sbin/paperclip-appliance-verify
 emit appliance.lock /opt/paperclip/integration/build/appliance.lock

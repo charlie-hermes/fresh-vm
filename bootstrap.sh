@@ -181,6 +181,9 @@ test "$("$hermes_root/venv/bin/hermes" --version |
   awk 'NR==1 {sub(/^v/,"",$3); print $3; exit}')" = "$HERMES_VERSION" ||
   die "Hermes CLI version mismatch"
 
+step "Install pinned Agency OS $AGENCY_OS_COMMIT"
+"$repo/scripts/agency-os-install" >/dev/null
+
 step "Pull the digest-pinned Hermes sandbox image"
 docker pull "$HERMES_DOCKER_IMAGE"
 test "$(docker image inspect --format '{{.Id}}' "$HERMES_DOCKER_IMAGE")" = \
@@ -216,6 +219,8 @@ install -o root -g root -m 0755 "$repo/scripts/core-role-transition" \
   /usr/local/sbin/paperclip-core-role-transition
 install -o root -g root -m 0755 "$repo/scripts/runtime-bundle-verify" \
   /opt/paperclip/ops/runtime-bundle-verify
+install -o root -g root -m 0755 "$repo/scripts/agency-os-install" \
+  /usr/local/sbin/agency-os-install
 install -o root -g root -m 0755 "$repo/verify.sh" \
   /usr/local/sbin/paperclip-appliance-verify
 
@@ -237,8 +242,9 @@ fi
 "$repo/scripts/initialize-pre"
 systemctl enable --now paperclip.service
 "$repo/scripts/initialize-finalize"
+/opt/paperclip/ops/agency-os-activate >/dev/null
 
 step "Bootstrap complete"
 echo "The appliance is initialized with unique local secrets."
-echo "Next: sudo ./configure-secrets.sh AUTH_JSON OFFSITE_CONFIG"
+echo "Next: sudo ./configure-secrets.sh AUTH_JSON"
 echo "Then reboot before running: sudo ./verify.sh"

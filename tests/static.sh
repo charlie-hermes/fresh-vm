@@ -90,8 +90,12 @@ grep -q 'exec /opt/paperclip/ops/paperclip-network-policy' \
 grep -q 'tailscaled.service.d/paperclip-network-policy.conf' bootstrap.sh
 grep -q 'agency-os-g2-verify' files/ops/agency-os-activate
 grep -q 'agency-os-g2-verify' verify.sh
+grep -q 'agency-os-brand-agent-activate' files/ops/agency-os-activate
+grep -q 'agency-os-brand-agent-verify' verify.sh
+grep -q -- '--host 127.0.0.1 --port 3181' files/systemd/agency-os-brand-agent.service
+grep -q 'ReadWritePaths=/var/lib/agency-os' files/systemd/agency-os-brand-agent.service
 for field in verification-result.json output_lines required_lines exit_status \
-  verifier_sha256 appliance_lock_sha256 installed_assets_sha256 g2_summary; do
+  verifier_sha256 appliance_lock_sha256 installed_assets_sha256 g2_summary brand_agent_summary; do
   grep -q "$field" verify.sh
 done
 

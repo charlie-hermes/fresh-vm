@@ -1,0 +1,60 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+# shellcheck disable=SC1091
+. /opt/paperclip/integration/build/appliance.lock
+target=/opt/agency-os/current
+test "$(git -C "$target" rev-parse HEAD)" = "$AGENCY_OS_COMMIT"
+
+/usr/bin/python3 "$target/scripts/prepare_fleet_brand_agent.py" \
+  --repository-root "$target" >/dev/null
+
+install -d -o root -g root -m 0700 /etc/agency-os
+environment=/etc/agency-os/brand-agent.env
+if test ! -f "$environment"; then
+  temporary=$(mktemp /etc/agency-os/.brand-agent.XXXXXX)
+  api_key=$(openssl rand -hex 32)
+  action_secret=$(openssl rand -hex 32)
+  {
+    printf 'FLEET_BRAND_AGENT_API_KEY=%s\n' "$api_key"
+    printf 'FLEET_BRAND_AGENT_ACTION_SECRET=%s\n' "$action_secret"
+  } >"$temporary"
+  chown root:root "$temporary"
+  chmod 0600 "$temporary"
+  mv -f "$temporary" "$environment"
+  unset api_key action_secret
+fi
+test "$(stat -c '%a:%U' "$environment")" = "600:root"
+test "$(grep -Ec '^FLEET_BRAND_AGENT_(API_KEY|ACTION_SECRET)=[0-9a-f]{64}$' \
+  "$environment")" -eq 2
+
+systemctl daemon-reload
+systemctl enable agency-os-brand-agent.service
+systemctl restart agency-os-brand-agent.service
+ready=false
+for _ in $(seq 1 30); do
+  if curl --fail --silent --max-time 2 http://127.0.0.1:3181/health |
+      jq -e '.status=="ok" and .brand_id=="brand_fleet" and
+        .public_claim_count==7 and .external_model==false' >/dev/null 2>&1; then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+"$ready" || {
+  systemctl status agency-os-brand-agent.service --no-pager >&2 || true
+  echo "Fleet Brand Agent did not become ready" >&2
+  exit 1
+}
+set -a
+# shellcheck disable=SC1090
+. "$environment"
+set +a
+/usr/bin/python3 "$target/scripts/accept_fleet_brand_agent.py" \
+  --repository-root "$target" --service-url http://127.0.0.1:3181 >/dev/null
+unset FLEET_BRAND_AGENT_API_KEY FLEET_BRAND_AGENT_ACTION_SECRET
+/opt/paperclip/ops/agency-os-brand-agent-verify >/dev/null
+echo "Fleet Brand Agent G2.5: PASS"

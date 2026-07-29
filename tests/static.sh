@@ -13,8 +13,13 @@ test "$(tests/generate-manifest.sh)" = "$(cat MANIFEST.sha256)"
 
 for script in bootstrap.sh configure-secrets.sh verify.sh scripts/* \
   files/factory/skills/paperclip-employee/scripts/* tests/*.sh; do
+  test -f "$script" || continue
   case "$script" in *.md) continue ;; esac
-  bash -n "$script"
+  case "$(head -n 1 "$script")" in
+    *python*) python3 -m py_compile "$script" ;;
+    *'/bin/sh'*) sh -n "$script" ;;
+    *) bash -n "$script" ;;
+  esac
 done
 for script in files/ops/*; do
   case "$(head -n 1 "$script")" in

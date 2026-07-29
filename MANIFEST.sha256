@@ -53,9 +53,9 @@ b48ee3d06f99933820d1f1de5661d9ef62e3f0205e7829996fbaf761571e1aee  ./files/factor
 c4054d3791e8d071eff14dce6374d92a7659a4b3b86e4585d12c886fa986248d  ./files/factory/skills/paperclip-employee/scripts/paperclip-checkout
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458  ./files/factory/skills/paperclip-employee/scripts/paperclip-issue-update
 f34cf18da88a1c76e75a2ff8c659ed89c2412b482c1efa69519664206e6aeb8a  ./files/factory/skills/paperclip-employee/scripts/paperclip-upload-artifact.sh
-50fd8cc7833956ea06c1b8f79261e976db0dfbbc3d1131fe28504c05ca002f95  ./files/ops/agency-os-activate
+fb712c94db11c68780a173d6e7137711ba2063602f7ed24179bdf014ec58a8f7  ./files/ops/agency-os-activate
 3ef8b97b9fdc954ec53396da30460537ad2f5d5257196a5ab3f1244aab27f201  ./files/ops/agency-os-g2-verify
-96501c4620dbd5bcf12e8ce9a580aac3a6c899fbd4ebebfbc5ea769a30107572  ./files/ops/agency-os-live-acceptance
+8d61b29b9cfcb07986f7e995b780e33c61ace3cd94379f5bbc450eaa17005865  ./files/ops/agency-os-live-acceptance
 e78424424d1e7acc7fa6b7b94754735fff615ee8104d86328d6fdc67ad3cfc92  ./files/ops/paperclip-api
 eeb66da8dadb451095b7d0da816f9ddec5b6a843fda1b10139485b760c7cbd35  ./files/ops/paperclip-backup.sh
 e4af246514861ed58c7ef7658003061fe264d406ca1110764b4cf9d967bad473  ./files/ops/paperclip-board-api
@@ -96,7 +96,7 @@ ae079d8c6a8029d5b9952257791398897f580ccf231b290a37756f754412ce05  ./files/system
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84  ./files/systemd/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f  ./files/systemd/paperclip.service
 6b535ca10a989773521086ae80eb7ab90fdc6da1cae757e46f723be822b522c7  ./locks/hermes-ddgs.requirements.txt
-a7be943a5cd6aa074e1103b4a07f8844984b0717a9242c0c77a4ca7c810850e9  ./locks/installed-assets.tsv
+96e51e35c177be7cca31d33646d6b0bf1c270cf8a076531482af0ffed7085542  ./locks/installed-assets.tsv
 974cf04cdd2f3e2fb8e55c7cc5f310842cc5fe48ae3e64bb80bab940c0de5331  ./locks/overlays.tsv
 209fa78fa15b073880c1b9466214bd9ba38c39f8cac12e62ea6aadec55386536  ./locks/paperclip/package-lock.json
 3b5f830e5b9023f4a03699827fa82f7add4f0334b8ed34c28b6104a44a19fde8  ./locks/paperclip/package.json

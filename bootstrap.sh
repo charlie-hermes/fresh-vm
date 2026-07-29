@@ -43,9 +43,15 @@ test "$root_free_kib" -ge "$MIN_ROOT_FREE_KIB" ||
 if [ -f /var/lib/paperclip-appliance/complete ]; then
   rm -f -- /var/lib/paperclip-appliance/pending
   rm -rf -- /var/lib/paperclip-appliance/bootstrap
-  step "Existing initialized appliance detected"
+  step "Existing initialized appliance detected; install the pinned G2.6 portal release"
+  "$repo/scripts/fleet-portal-install"
+  if [ ! -s /etc/agency-os/fleet-portal.env ]; then
+    echo "The G2.6 runtime is installed, but the portal cannot start until WorkOS and Cloudflare values are configured."
+    echo "Follow docs/fleet-portal-operations.md, then run sudo fleet-portal-configure /absolute/secure/path/fleet-portal.env."
+    exit 78
+  fi
   "$repo/verify.sh" --platform-only
-  echo "Bootstrap is already complete; no state was recreated."
+  echo "Existing appliance upgraded to the pinned G2.6 portal release; no state was recreated."
   exit 0
 fi
 if [ -f /var/lib/paperclip-appliance/precomplete ] &&
@@ -248,8 +254,10 @@ fi
 systemctl enable --now paperclip.service
 "$repo/scripts/initialize-finalize"
 /opt/paperclip/ops/agency-os-activate >/dev/null
+"$repo/scripts/fleet-portal-install" >/dev/null
 
 step "Bootstrap complete"
 echo "The appliance is initialized with unique local secrets."
 echo "Next: sudo ./configure-secrets.sh AUTH_JSON"
 echo "Then reboot before running: sudo ./verify.sh"
+echo "For G2.6, securely configure WorkOS and Cloudflare: sudo fleet-portal-configure /secure/path/fleet-portal.env"

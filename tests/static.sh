@@ -94,6 +94,18 @@ grep -q 'agency-os-brand-agent-activate' files/ops/agency-os-activate
 grep -q 'agency-os-brand-agent-verify' verify.sh
 grep -q -- '--host 127.0.0.1 --port 3181' files/systemd/agency-os-brand-agent.service
 grep -q 'ReadWritePaths=/var/lib/agency-os' files/systemd/agency-os-brand-agent.service
+for unit in fleet-portal-authority.service fleet-portal-command-worker.service \
+  fleet-ingest-worker.service fleet-portal-web.service; do
+  test -f "files/systemd/$unit"
+done
+grep -q 'PrivateNetwork=true' files/systemd/fleet-ingest-worker.service
+grep -q 'User=fleet-portal' files/systemd/fleet-portal-web.service
+! grep -q 'PAPERCLIP_' files/systemd/fleet-portal-web.service
+grep -q '127.0.0.1:3190' verify.sh
+grep -q 'fleet-portal-configure' bootstrap.sh
+grep -q 'Existing initialized appliance detected; install the pinned G2.6 portal release' bootstrap.sh
+grep -q '"$repo/scripts/fleet-portal-install"' bootstrap.sh
+grep -q 'npm ci --prefix fleet-portal' scripts/agency-os-install
 for field in verification-result.json output_lines required_lines exit_status \
   verifier_sha256 appliance_lock_sha256 installed_assets_sha256 g2_summary brand_agent_summary; do
   grep -q "$field" verify.sh

@@ -1,0 +1,95 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+test "$#" -eq 1 || { echo "usage: sudo fleet-portal-configure /secure/path/fleet-portal.env" >&2; exit 64; }
+source_file=$1
+test "${source_file#/}" != "$source_file" && test -f "$source_file" && test ! -L "$source_file" || {
+  echo "configuration must be an absolute, non-symlink regular file" >&2
+  exit 65
+}
+required=(WORKOS_CLIENT_ID WORKOS_API_KEY WORKOS_COOKIE_PASSWORD \
+  NEXT_PUBLIC_WORKOS_REDIRECT_URI FLEET_WORKOS_ORGANIZATION_ID \
+  FLEET_OWNER_WORKOS_SUBJECT CLOUDFLARE_ACCESS_TEAM_DOMAIN \
+  CLOUDFLARE_ACCESS_AUDIENCE FLEET_PORTAL_ADMIN_USER_IDS)
+for key in "${required[@]}"; do
+  test "$(grep -c "^${key}=" "$source_file")" -eq 1 || {
+    echo "missing or duplicate configuration key: $key" >&2
+    exit 65
+  }
+  value=$(grep -m1 "^${key}=" "$source_file" | cut -d= -f2-)
+  test -n "$value" && [[ "$value" =~ ^[A-Za-z0-9_./:@+=,-]+$ ]] || {
+    echo "configuration value has an unsafe format: $key" >&2
+    exit 65
+  }
+done
+approval_id=$(grep -m1 '^FLEET_PORTAL_ACTIVE_APPROVAL_ID=' "$source_file" | cut -d= -f2- || true)
+approval_checksum=$(grep -m1 '^FLEET_PORTAL_ACTIVE_APPROVAL_CHECKSUM=' "$source_file" | cut -d= -f2- || true)
+if test -n "$approval_id" || test -n "$approval_checksum"; then
+  [[ "$approval_id" =~ ^[0-9a-f-]{36}$ ]] &&
+    [[ "$approval_checksum" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+      echo "active approval ID and checksum must both be exact and valid" >&2
+      exit 65
+    }
+fi
+
+cookie=$(grep -m1 '^WORKOS_COOKIE_PASSWORD=' "$source_file" | cut -d= -f2-)
+test "${#cookie}" -ge 32 || { echo "WORKOS_COOKIE_PASSWORD must be at least 32 characters" >&2; exit 65; }
+redirect=$(grep -m1 '^NEXT_PUBLIC_WORKOS_REDIRECT_URI=' "$source_file" | cut -d= -f2-)
+test "$redirect" = 'https://fleet.madebyfleet.com/auth/callback' || {
+  echo "WorkOS redirect URI must exactly match the Fleet callback" >&2
+  exit 65
+}
+team=$(grep -m1 '^CLOUDFLARE_ACCESS_TEAM_DOMAIN=' "$source_file" | cut -d= -f2-)
+[[ "$team" =~ ^[a-z0-9-]+\.cloudflareaccess\.com$ ]] || {
+  echo "Cloudflare Access team domain is invalid" >&2
+  exit 65
+}
+
+temporary=$(mktemp /etc/agency-os/.fleet-portal.XXXXXX)
+for key in "${required[@]}"; do
+  case "$key" in FLEET_OWNER_WORKOS_SUBJECT) continue;; esac
+  grep -m1 "^${key}=" "$source_file" >>"$temporary"
+done
+if test -n "$approval_id"; then
+  printf 'FLEET_PORTAL_ACTIVE_APPROVAL_ID=%s\nFLEET_PORTAL_ACTIVE_APPROVAL_CHECKSUM=%s\n' \
+    "$approval_id" "$approval_checksum" >>"$temporary"
+fi
+printf '%s\n' \
+  'WORKOS_COOKIE_MAX_AGE=43200' \
+  'WORKOS_COOKIE_SAMESITE=lax' \
+  'FLEET_PORTAL_IDENTITY_MODE=workos' \
+  'FLEET_PORTAL_CLIENT_HOST=fleet.madebyfleet.com' \
+  'FLEET_PORTAL_ADMIN_HOST=admin.madebyfleet.com' \
+  'FLEET_PORTAL_AUTHORITY_SOCKET=/run/agency-os/fleet-authority.sock' \
+  'FLEET_INGEST_SPOOL=/var/spool/agency-os/fleet-ingest/incoming' >>"$temporary"
+install -o root -g root -m 0600 "$temporary" /etc/agency-os/fleet-portal.env
+rm -f -- "$temporary"
+
+organization=$(grep -m1 '^FLEET_WORKOS_ORGANIZATION_ID=' "$source_file" | cut -d= -f2-)
+subject=$(grep -m1 '^FLEET_OWNER_WORKOS_SUBJECT=' "$source_file" | cut -d= -f2-)
+/usr/bin/python3 /opt/agency-os/current/scripts/initialize_fleet_portal.py \
+  --database /var/lib/agency-os/fleet-portal.sqlite3 \
+  --workos-organization-id "$organization" --workos-subject "$subject" >/dev/null
+if test -n "$approval_id"; then
+  /usr/bin/python3 /opt/agency-os/current/scripts/bind_fleet_portal_approval.py \
+    --database /var/lib/agency-os/fleet-portal.sqlite3 \
+    --approval-id "$approval_id" --approval-checksum "$approval_checksum" >/dev/null
+fi
+
+systemctl enable --now fleet-portal-authority.service fleet-ingest-worker.service \
+  fleet-portal-command-worker.service fleet-portal-web.service
+ready=false
+for _ in $(seq 1 30); do
+  if curl --fail --silent --max-time 2 http://127.0.0.1:3190/health |
+      jq -e '.status=="pass" and .service=="fleet-portal-web" and
+        .authority=="fleet_portal"' >/dev/null 2>&1; then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+"$ready" || { systemctl status fleet-portal-web.service --no-pager >&2 || true; exit 1; }
+echo "Fleet portal configured and healthy on 127.0.0.1:3190."

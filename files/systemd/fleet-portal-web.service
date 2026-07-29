@@ -1,0 +1,36 @@
+[Unit]
+Description=Fleet private client portal
+After=network-online.target fleet-portal-authority.service
+Wants=network-online.target
+Requires=fleet-portal-authority.service
+
+[Service]
+Type=simple
+User=fleet-portal
+Group=fleet-portal
+SupplementaryGroups=fleet-ingest
+EnvironmentFile=/etc/agency-os/fleet-portal.env
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3190
+WorkingDirectory=/opt/agency-os/current/fleet-portal/.next/standalone
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/spool/agency-os/fleet-ingest/incoming
+
+[Install]
+WantedBy=multi-user.target

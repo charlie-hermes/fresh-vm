@@ -104,6 +104,12 @@ platform_check() {
   test "$(node --version)" = "v$NODE_VERSION" || fail "Node version drift"
   test "$(dpkg-query -W -f='${Version}' python3-jsonschema)" = \
     "$PYTHON_JSONSCHEMA_PACKAGE_VERSION" || fail "jsonschema package drift"
+  test "$(dpkg-query -W -f='${Version}' clamav)" = "$CLAMAV_PACKAGE_VERSION" ||
+    fail "ClamAV package drift"
+  test "$(dpkg-query -W -f='${Version}' poppler-utils)" = "$POPPLER_UTILS_PACKAGE_VERSION" ||
+    fail "Poppler package drift"
+  test "$(dpkg-query -W -f='${Version}' tesseract-ocr)" = "$TESSERACT_OCR_PACKAGE_VERSION" ||
+    fail "Tesseract package drift"
   test "$(/opt/hermes-agent/$HERMES_COMMIT/venv/bin/hermes --version |
     awk 'NR==1 {sub(/^v/,"",$3); print $3; exit}')" = \
     "$HERMES_VERSION" || fail "Hermes version drift"
@@ -117,6 +123,11 @@ platform_check() {
     fail "network policy rules or live probes"
   systemctl is-active --quiet paperclip.service || fail "Paperclip inactive"
   systemctl is-enabled --quiet paperclip.service || fail "Paperclip not enabled"
+  for service in fleet-portal-authority.service fleet-portal-command-worker.service \
+    fleet-ingest-worker.service fleet-portal-web.service; do
+    systemctl is-enabled --quiet "$service" || fail "$service not enabled"
+    systemctl is-active --quiet "$service" || fail "$service not active"
+  done
   for timer in paperclip-health.timer paperclip-soak-sample.timer; do
     systemctl is-enabled --quiet "$timer" || fail "$timer not enabled"
     systemctl is-active --quiet "$timer" || fail "$timer not active"
@@ -147,6 +158,27 @@ platform_check() {
   if ss -ltnH | awk '{print $4}' | grep -Eq "^(0\\.0\\.0\\.0|\\*):$PAPERCLIP_PORT$"; then
     fail "Paperclip exposed on a wildcard address"
   fi
+  ss -ltnH | awk '{print $4}' | grep -qx '127.0.0.1:3190' ||
+    fail "Fleet portal loopback bind address"
+  if ss -ltnH | awk '{print $4}' | grep -Eq '^(0\.0\.0\.0|\*):3190$'; then
+    fail "Fleet portal exposed on a wildcard address"
+  fi
+  curl --fail --silent --max-time 5 http://127.0.0.1:3190/health |
+    jq -e '.status=="pass" and .service=="fleet-portal-web" and
+      .authority=="fleet_portal"' >/dev/null || fail "Fleet portal authority health"
+  test "$(stat -c '%a:%U' /etc/agency-os/fleet-portal.env)" = "600:root" ||
+    fail "Fleet portal credential permissions"
+  test "$(stat -c '%a:%U' /var/lib/agency-os/fleet-portal.sqlite3)" = "600:root" ||
+    fail "Fleet portal authority permissions"
+  test -S /run/agency-os/fleet-authority.sock || fail "Fleet authority socket"
+  test "$(systemctl show -p User --value fleet-portal-web.service)" = fleet-portal ||
+    fail "Fleet portal web service identity"
+  systemctl show -p SupplementaryGroups --value fleet-portal-web.service |
+    grep -qw fleet-ingest || fail "Fleet portal ingest boundary"
+  test "$(systemctl show -p PrivateNetwork --value fleet-ingest-worker.service)" = yes ||
+    fail "Fleet ingest network isolation"
+  ! systemctl show -p Environment --value fleet-portal-web.service |
+    grep -q 'PAPERCLIP_' || fail "Paperclip credential leaked to Fleet web service"
   ss -ltnH | awk '{print $4}' | grep -qx '127.0.0.1:54329' ||
     fail "embedded database bind address"
 

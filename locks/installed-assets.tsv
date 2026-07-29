@@ -87,4 +87,4 @@ a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-ro
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
 39ca897f521201f7581bdf91b65698a90afb84ef8f31dd42caecf67be1938595	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-6ec568d66292202f13b6ecb6f48d12bee055b879318fad2762ea286dd6ce5bf1	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+fec8b4fd1b60999397744dea8753f24fa9a749f989235e72c117874b65f90f33	appliance.lock	/opt/paperclip/integration/build/appliance.lock

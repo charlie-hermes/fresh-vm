@@ -5,7 +5,7 @@ bb9d04b2a461744de23f0854525d0bc8f8ad490d13e24e2742429b88a4f3ee0d  ./AGENTS.md
 d61a1db31017aa5a2601548678ea607c31341234778e3212e30c8569ddef4afa  ./LICENSE
 2455c4227fbcaeab5a0ff71c91d33b8b54a810ab91d7972c93db038ec13e9d34  ./README.md
 2dec6555d199dead2c6b610a8597b8d8a511b0675743f0362d8b8b560b6cea79  ./THIRD_PARTY_NOTICES.md
-3dd436887958cd0efb831987a8ce6881ccadfdb22904433cb18234f2bcc8e117  ./appliance.lock
+0e8addfc66ad86f6a12424b8b449dab67b8fd0d24094d73955e750493f786c3d  ./appliance.lock
 1945064d4357332ec37fd33e250e706d0dd76bbc8b423b49a17a29212467001e  ./bootstrap.sh
 a2ab1a7254a68a907329915837fd2a7c7ec500a02d50b06c7509a9ad18dd3dc4  ./configure-secrets.sh
 3984eb0cf601acd8f52370e5ee6713a5c112a946b21cb96950dc52eda0daa199  ./docs/agency-os-operating-guide.md
@@ -104,7 +104,7 @@ ae079d8c6a8029d5b9952257791398897f580ccf231b290a37756f754412ce05  ./files/system
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84  ./files/systemd/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f  ./files/systemd/paperclip.service
 6b535ca10a989773521086ae80eb7ab90fdc6da1cae757e46f723be822b522c7  ./locks/hermes-ddgs.requirements.txt
-5af3b94d2a992c575f355924ac0341fece7f06698278d433864e3bac03bde2d8  ./locks/installed-assets.tsv
+8ca44292fb8cf3fce0b7f24bd66cc85c3aec07a47cbb9d6d4e0e507aa0383ea2  ./locks/installed-assets.tsv
 974cf04cdd2f3e2fb8e55c7cc5f310842cc5fe48ae3e64bb80bab940c0de5331  ./locks/overlays.tsv
 209fa78fa15b073880c1b9466214bd9ba38c39f8cac12e62ea6aadec55386536  ./locks/paperclip/package-lock.json
 3b5f830e5b9023f4a03699827fa82f7add4f0334b8ed34c28b6104a44a19fde8  ./locks/paperclip/package.json

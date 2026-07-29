@@ -3,6 +3,9 @@
 This guide explains how to use the live Hermes, Paperclip, Buzz, and Agency OS
 setup in everyday language.
 
+The current system status is **LIVE PRODUCTION**. The exact acceptance evidence
+is recorded in the Agency OS repository at `docs/live-production-status.md`.
+
 ## What each part does
 
 - Paperclip is the work board. It stores tasks, owners, dependencies, comments,
@@ -83,17 +86,16 @@ For the full production check, go to the reviewed `fresh-vm` checkout and run:
 sudo ./verify.sh
 ```
 
-The final five lines must be:
+The final status must be:
 
 ```text
 PLATFORM: PASS
 FUNCTIONAL ACCEPTANCE: PASS
+AGENCY OS: LIVE
 SECRET AUDIT: PASS
 SYSTEMD FAILED UNITS: 0
 PRODUCTION: READY
 ```
-
-The verifier also prints `AGENCY OS: LIVE` before the secret check.
 
 ## Start a normal Core campaign
 

@@ -31,7 +31,7 @@ d1a1a388ac3707c67a9cdf0c7c7108f7312c62dd853afe1ccf3b3cdcd4ca327a	files/systemd/p
 606bbcfbe6617a8b982c42b06e8ea4c27fd6e1dd25cfaa88a888699524913975	files/systemd/paperclip-soak-sample.service	/etc/systemd/system/paperclip-soak-sample.service
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84	files/systemd/paperclip-soak-sample.timer	/etc/systemd/system/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f	files/systemd/paperclip.service	/etc/systemd/system/paperclip.service
-ae8391ed6c4a7fe2bba01d320df36ac8a33e8f12e7fd8494c5d01863fe791b89	docs/agency-os-operating-guide.md	/opt/paperclip/integration/docs/agency-os-operating-guide.md
+3984eb0cf601acd8f52370e5ee6713a5c112a946b21cb96950dc52eda0daa199	docs/agency-os-operating-guide.md	/opt/paperclip/integration/docs/agency-os-operating-guide.md
 0a038bd6df7d14de52c64b5da700a5339ebef85d894b6af4d228398c3a37ac6c	docs/architecture-security.md	/opt/paperclip/integration/docs/architecture-security.md
 024b142e0db4e6c119cf2a9b8628e0e6c0662578e6d4a144365a3eb5387f5666	docs/backup-restore.md	/opt/paperclip/integration/docs/backup-restore.md
 430e6259cf8377f3c70ab5278736aa7cea9f1be3b49acc122ed996b06d5b6192	docs/core-role-activation.md	/opt/paperclip/integration/docs/core-role-activation.md
@@ -87,4 +87,4 @@ a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-ro
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
 167da1caea1e9fecfbbff330c15445edbeda4f6d0f2a45f9cb3c1728492e153d	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-c4a2b7f6e1fd84b20dd3a102ac1e758a20c3b172bad4bc2ab4dbaae2f7020395	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+adaa4495c69451ae53b175b5eeae894af3af6bfd031fd8ceee06dbc4a523b0f5	appliance.lock	/opt/paperclip/integration/build/appliance.lock

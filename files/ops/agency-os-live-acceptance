@@ -27,8 +27,37 @@ from agency_os.integrations import (
     PaperclipHTTPTransport,
     PaperclipLifecycleAdapter,
     TypedBuzzAdapter,
+    _task_metadata,
 )
 from agency_os.social_workflow import SocialAmplifierDenied, run_social_workflow
+
+
+def verify_completed_campaign(
+    adapter: PaperclipLifecycleAdapter,
+    tasks: list[dict[str, object]],
+    section: dict[str, object],
+    expected_count: int,
+) -> None:
+    approval_id = section.get("approval_id")
+    campaign_id = section.get("campaign_id")
+    if not isinstance(approval_id, str) or not isinstance(campaign_id, str):
+        raise SystemExit("Core proof campaign identity is incomplete")
+    approval = adapter.get_approval(approval_id)
+    approval_tasks = adapter.get_approval_issues(approval_id)
+    campaign_tasks = [
+        item for item in tasks
+        if _task_metadata(item).get("campaign_id") == campaign_id
+    ]
+    if (
+        approval.get("status") != "approved"
+        or section.get("approval_status") != "approved"
+        or section.get("task_count") != expected_count
+        or len(approval_tasks) != 1
+        or approval_tasks[0].get("status") != "done"
+        or len(campaign_tasks) != expected_count
+        or not all(item.get("status") == "done" for item in campaign_tasks)
+    ):
+        raise SystemExit("Core proof campaign is no longer complete")
 
 
 def load_env(path: Path) -> dict[str, str]:
@@ -156,6 +185,56 @@ def main() -> None:
             executable="/usr/local/bin/buzz", timeout_seconds=30),
         "brand_agency_isolation",
     )
+    evidence_path = Path("/var/lib/paperclip-appliance/agency-os-production.json")
+    if evidence_path.is_file():
+        previous = json.loads(evidence_path.read_text(encoding="utf-8"))
+        if previous.get("status") == "live_production":
+            if not (
+                previous.get("schema_version") == "1.0"
+                and previous.get("brand_id") == brand_id
+                and previous.get("company_id") == company_id
+                and previous.get("paperclip_authenticated") is True
+                and previous.get("buzz_authenticated") is True
+                and previous.get("provider_external_writes") is False
+                and previous.get("mock_publication_calls") == 3
+            ):
+                raise SystemExit("previous Core production proof is unsafe")
+            core_section = previous.get("core")
+            social_section = previous.get("social")
+            isolation_section = previous.get("isolation_brand")
+            if not all(
+                isinstance(item, dict)
+                for item in (core_section, social_section, isolation_section)
+            ):
+                raise SystemExit("previous Core proof sections are incomplete")
+            if (
+                isolation_section.get("company_id") != isolation_id
+                or isolation_section.get("brand_id") != "brand_agency_isolation"
+                or isolation_section.get("cross_brand_social_denied") is not True
+                or isolation_section.get("denial_created_tasks") is not False
+                or isolation_section.get("paperclip_cost_event_recorded") is not False
+            ):
+                raise SystemExit("previous isolation proof changed")
+            main_tasks = paperclip.list_tasks()
+            isolation_tasks = isolation_paperclip.list_tasks()
+            verify_completed_campaign(paperclip, main_tasks, core_section, 8)
+            verify_completed_campaign(paperclip, main_tasks, social_section, 5)
+            verify_completed_campaign(
+                isolation_paperclip, isolation_tasks, isolation_section, 8
+            )
+            proof_origin = (
+                previous.get("proof_origin_agency_os_commit")
+                or previous.get("agency_os_commit")
+            )
+            if not isinstance(proof_origin, str) or len(proof_origin) != 40:
+                raise SystemExit("Core proof origin commit is invalid")
+            previous["proof_origin_agency_os_commit"] = proof_origin
+            previous["reattested_existing_proof"] = True
+            previous["agency_os_commit"] = commit
+            previous["verified_at"] = datetime.now(timezone.utc).isoformat()
+            atomic_json(evidence_path, previous)
+            print("AGENCY OS LIVE ACCEPTANCE: PASS (RE-ATTESTED)")
+            return
     def approve(requested: dict[str, object], _manifest: object) -> dict[str, object]:
         return board.decide_approval(
             str(requested["id"]),

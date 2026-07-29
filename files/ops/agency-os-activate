@@ -16,13 +16,23 @@ jq -en --arg id "$company_id" '$id | test("^[0-9a-f-]{36}$")' >/dev/null
 install -d -o root -g root -m 0700 /var/lib/agency-os
 /usr/bin/python3 "$target/scripts/agency-os-fleet-g2-activate" >/dev/null
 /opt/paperclip/ops/agency-os-g2-verify >/dev/null
+/opt/paperclip/ops/agency-os-live-acceptance >/dev/null
+proof=/var/lib/paperclip-appliance/fleet-g2-brand-intelligence.json
+publication_approval=$(jq -er '.closed_loop.publication_approval_id' "$proof")
+core_proof=/var/lib/paperclip-appliance/agency-os-production.json
+core_approval=$(jq -er '.core.approval_id' "$core_proof")
+social_approval=$(jq -er '.social.approval_id' "$core_proof")
 install -d -o root -g root -m 0700 /etc/agency-os
 config=$(mktemp /etc/agency-os/.operator-portal.XXXXXX)
 jq -n --arg base "http://$PAPERCLIP_GATEWAY:$PAPERCLIP_PORT" \
-  --arg company "$company_id" \
+  --arg company "$company_id" --arg core "$core_approval" \
+  --arg social "$social_approval" \
+  --arg publication "$publication_approval" \
   '{paperclip_base_url:$base,bindings:[{company_id:$company,
     brand_id:"brand_agency_live",token_env:"PAPERCLIP_BOARD_API_KEY",
-    approval_ids:[]}]}' >"$config"
+    approval_ids:[$core,$social]},{company_id:$company,brand_id:"brand_fleet",
+    token_env:"PAPERCLIP_BOARD_API_KEY",
+    approval_ids:[$publication]}]}' >"$config"
 chown root:root "$config"
 chmod 0600 "$config"
 mv -f "$config" /etc/agency-os/operator-portal.json
@@ -34,7 +44,9 @@ for _ in $(seq 1 30); do
   if curl --fail --silent --max-time 2 \
       http://127.0.0.1:3180/api/status |
       jq -e '.authority=="paperclip" and .projection=="read_only" and
-        .admin.role_bundle_count==12' >/dev/null 2>&1; then
+        .admin.role_bundle_count==12 and .portfolio.brand_count==2 and
+        (.portfolio.campaign_count>=3) and (.approvals|length)==3' \
+        >/dev/null 2>&1; then
     ready=true
     break
   fi

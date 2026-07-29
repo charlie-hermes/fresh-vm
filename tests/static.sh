@@ -74,6 +74,22 @@ mutation_line=$(grep -n '^  create_or_update_core_agents$' scripts/core-role-tra
 test "$snapshot_line" -lt "$arm_line" && test "$arm_line" -lt "$mutation_line"
 ! grep -q 'already active and platform verification passed' scripts/core-role-transition
 
+grep -q 'first_input.*INPUT' files/ops/paperclip-network-verify
+grep -q 'Paperclip INPUT hook is not first' files/ops/paperclip-network-verify
+grep -q 'container UDP/41641 reached Tailscale' files/ops/paperclip-network-verify
+! grep -q 'Permit that.*predecessor' files/ops/paperclip-network-verify
+grep -q 'while.*INPUT.*host_chain' files/ops/paperclip-network-policy
+test -f files/systemd-dropins/tailscaled-paperclip-network-policy.conf
+grep -qx 'ExecStartPost=-/opt/paperclip/ops/paperclip-network-policy' \
+  files/systemd-dropins/tailscaled-paperclip-network-policy.conf
+grep -q 'tailscaled.service.d/paperclip-network-policy.conf' bootstrap.sh
+grep -q 'agency-os-g2-verify' files/ops/agency-os-activate
+grep -q 'agency-os-g2-verify' verify.sh
+for field in verification-result.json output_lines required_lines exit_status \
+  verifier_sha256 appliance_lock_sha256 installed_assets_sha256 g2_summary; do
+  grep -q "$field" verify.sh
+done
+
 grep -q 'usage: sudo ./configure-secrets.sh AUTH_JSON' configure-secrets.sh
 ! grep -q 'OFFSITE_CONFIG\|configured-boot-id\|paperclip-backup\|offsite-sync' configure-secrets.sh
 ! grep -q 'configured-boot-id\|PAPERCLIP_OFFSITE_REQUIRED\|BACKUP: PASS' verify.sh

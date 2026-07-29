@@ -15,6 +15,8 @@ done
 for source in files/systemd/*; do
   emit "$source" "/etc/systemd/system/${source##*/}"
 done
+emit files/systemd-dropins/tailscaled-paperclip-network-policy.conf \
+  /etc/systemd/system/tailscaled.service.d/paperclip-network-policy.conf
 while IFS= read -r source; do
   emit "$source" "/opt/paperclip/integration/${source#files/}"
 done < <(find files/factory files/paperclip docs -type f | sort)

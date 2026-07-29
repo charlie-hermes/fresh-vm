@@ -1,7 +1,7 @@
 [Unit]
 Description=Paperclip Hermes Docker egress and host-access policy
 Requires=docker.service
-After=docker.service
+After=docker.service tailscaled.service
 Before=paperclip.service
 PartOf=docker.service
 

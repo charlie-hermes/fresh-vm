@@ -18,8 +18,10 @@ $iptables -w -A "$egress_chain" -d 172.16.0.0/12 -j REJECT --reject-with icmp-ne
 $iptables -w -A "$egress_chain" -d 192.168.0.0/16 -j REJECT --reject-with icmp-net-unreachable
 $iptables -w -A "$egress_chain" -j RETURN
 
-$iptables -w -C DOCKER-USER -s "$subnet" -j "$egress_chain" 2>/dev/null || \
-  $iptables -w -I DOCKER-USER 1 -s "$subnet" -j "$egress_chain"
+while $iptables -w -C DOCKER-USER -s "$subnet" -j "$egress_chain" 2>/dev/null; do
+  $iptables -w -D DOCKER-USER -s "$subnet" -j "$egress_chain"
+done
+$iptables -w -I DOCKER-USER 1 -s "$subnet" -j "$egress_chain"
 
 $iptables -w -N "$host_chain" 2>/dev/null || true
 $iptables -w -F "$host_chain"
@@ -27,7 +29,11 @@ $iptables -w -A "$host_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCE
 $iptables -w -A "$host_chain" -p tcp --dport 3100 -j ACCEPT
 $iptables -w -A "$host_chain" -j REJECT --reject-with icmp-port-unreachable
 
-$iptables -w -C INPUT -s "$subnet" -j "$host_chain" 2>/dev/null || \
-  $iptables -w -I INPUT 1 -s "$subnet" -j "$host_chain"
+# This source-specific hook must precede Tailscale's broad UDP/41641 rule.
+# Delete every stale copy before reinserting it at the absolute first position.
+while $iptables -w -C INPUT -s "$subnet" -j "$host_chain" 2>/dev/null; do
+  $iptables -w -D INPUT -s "$subnet" -j "$host_chain"
+done
+$iptables -w -I INPUT 1 -s "$subnet" -j "$host_chain"
 
 echo "Paperclip Hermes network policy active for $subnet"

@@ -106,6 +106,7 @@ grep -q 'fleet-portal-configure' bootstrap.sh
 grep -q 'Existing initialized appliance detected; install the pinned G2.6 portal release' bootstrap.sh
 grep -q '"$repo/scripts/fleet-portal-install"' bootstrap.sh
 grep -q 'npm ci --prefix fleet-portal' scripts/agency-os-install
+grep -q 'chmod -R a+rX,u+w,go-w "$target"' scripts/agency-os-install
 for field in verification-result.json output_lines required_lines exit_status \
   verifier_sha256 appliance_lock_sha256 installed_assets_sha256 g2_summary brand_agent_summary; do
   grep -q "$field" verify.sh

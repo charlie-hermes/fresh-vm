@@ -32,8 +32,7 @@ if test -d "$target/fleet-portal/public"; then
   cp -a "$target/fleet-portal/public" "$target/fleet-portal/.next/standalone/public"
 fi
 chown -R root:root "$target"
-find "$target" -type d -exec chmod go-w {} +
-find "$target" -type f -exec chmod go-w {} +
+chmod -R a+rX,u+w,go-w "$target"
 next_link=$target_root/.current.$$
 ln -s "$target" "$next_link"
 mv -Tf "$next_link" "$target_root/current"

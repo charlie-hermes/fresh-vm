@@ -1,4 +1,5 @@
-314cec83198b9c9dfb9c5afd851f6206c5dbc89b6934abf822f28cf5f7d3401e	files/ops/agency-os-activate	/opt/paperclip/ops/agency-os-activate
+adee18832c855f6567a9eec09f5ed5cabd2ba2bdfce18a6dc00b10ed19bb8647	files/ops/agency-os-activate	/opt/paperclip/ops/agency-os-activate
+06b177fd3365a567032a2687043b3b2bb974ec909234c381ee3b980820bb728f	files/ops/agency-os-g2-verify	/opt/paperclip/ops/agency-os-g2-verify
 96501c4620dbd5bcf12e8ce9a580aac3a6c899fbd4ebebfbc5ea769a30107572	files/ops/agency-os-live-acceptance	/opt/paperclip/ops/agency-os-live-acceptance
 e78424424d1e7acc7fa6b7b94754735fff615ee8104d86328d6fdc67ad3cfc92	files/ops/paperclip-api	/opt/paperclip/ops/paperclip-api
 eeb66da8dadb451095b7d0da816f9ddec5b6a843fda1b10139485b760c7cbd35	files/ops/paperclip-backup.sh	/opt/paperclip/ops/paperclip-backup.sh
@@ -9,9 +10,9 @@ a089594a127337e33813e19d7fc30e01ce54034201aaed905d66e85637a3d1de	files/ops/paper
 09ac8a59bb324b4caec335bdc9ebc0f9b3fca8513cc6ecae2d34879301a8b090	files/ops/paperclip-http-denial-check	/opt/paperclip/ops/paperclip-http-denial-check
 6be93b31fd592a71af0f90eccc6bfd82be14fc705b3359b92bf9859e007b3615	files/ops/paperclip-integration-regression	/opt/paperclip/ops/paperclip-integration-regression
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458	files/ops/paperclip-issue-update	/opt/paperclip/ops/paperclip-issue-update
-8304037e6e1ebfe9522564b33cbc66ceaa8082af6a40e118f435ae0b4761a657	files/ops/paperclip-network-policy	/opt/paperclip/ops/paperclip-network-policy
-b2b42ed870249c47ae1c5656f01da65f8cf90e2ee977bd63b615f13440214fd3	files/ops/paperclip-network-probe.py	/opt/paperclip/ops/paperclip-network-probe.py
-5d49907c696edede27b75a817727807cc12e6f94b41de9aa8134b7dcba5a564e	files/ops/paperclip-network-verify	/opt/paperclip/ops/paperclip-network-verify
+e328a611531bd84cf7eb67e44d62d25bb937b250abbddf0d5f71ff884b66cfc5	files/ops/paperclip-network-policy	/opt/paperclip/ops/paperclip-network-policy
+1c8e265abd05ce84d28966c7efdd4d7f675d4300dd82bd4d4e93340fd62f6fe3	files/ops/paperclip-network-probe.py	/opt/paperclip/ops/paperclip-network-probe.py
+062772e77e930b26fd17153f484c63ac74a45e376f1e12642f6c6cf39c199289	files/ops/paperclip-network-verify	/opt/paperclip/ops/paperclip-network-verify
 51c114ce26538347e7dd593dbffe1193d3e41a9ea93f1f9062d4ce222521005f	files/ops/paperclip-node-regression.mjs	/opt/paperclip/ops/paperclip-node-regression.mjs
 143eeb54397863e021765e61427d73c70642cb4b3675af166718308395b536af	files/ops/paperclip-offsite-sync.sh	/opt/paperclip/ops/paperclip-offsite-sync.sh
 415da4b0eeb0e34699864138a30535e7b404f7fdaff96f5e8acc4c99a98fa8c1	files/ops/paperclip-secret-audit.sh	/opt/paperclip/ops/paperclip-secret-audit.sh
@@ -25,12 +26,13 @@ fdaece8aaa51db5b5852604664caaf240ed064c10a8b432bff58744b575bc458	files/systemd/a
 c8886307ea7c3eeb756af69c129586867c1e7d246e184f2612a58552057e162b	files/systemd/paperclip-backup.timer	/etc/systemd/system/paperclip-backup.timer
 d1a1a388ac3707c67a9cdf0c7c7108f7312c62dd853afe1ccf3b3cdcd4ca327a	files/systemd/paperclip-health.service	/etc/systemd/system/paperclip-health.service
 9be5e2474beddf10baa04c3d16c9b5d6d45f5cfbaa384d24561b779de7cfb0d1	files/systemd/paperclip-health.timer	/etc/systemd/system/paperclip-health.timer
-52d9ed485b599e7d0600b59e7971f695cc7987ea5e8be0c9c94112078a6716c7	files/systemd/paperclip-network-policy.service	/etc/systemd/system/paperclip-network-policy.service
+ae079d8c6a8029d5b9952257791398897f580ccf231b290a37756f754412ce05	files/systemd/paperclip-network-policy.service	/etc/systemd/system/paperclip-network-policy.service
 4f9507e066889ff9337fcda4ecf433fe2c6aba07bf23e4aabb01a91ffb63e4b3	files/systemd/paperclip-offsite-sync.service	/etc/systemd/system/paperclip-offsite-sync.service
 438344952439b05969cc2f1a856b7f487d3160838bbe4c3ad705b8bc2db170d9	files/systemd/paperclip-offsite-sync.timer	/etc/systemd/system/paperclip-offsite-sync.timer
 606bbcfbe6617a8b982c42b06e8ea4c27fd6e1dd25cfaa88a888699524913975	files/systemd/paperclip-soak-sample.service	/etc/systemd/system/paperclip-soak-sample.service
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84	files/systemd/paperclip-soak-sample.timer	/etc/systemd/system/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f	files/systemd/paperclip.service	/etc/systemd/system/paperclip.service
+9708035a18510d1a55e887287c4014ea20f0a845706656e0757101a6bf3e86ce	files/systemd-dropins/tailscaled-paperclip-network-policy.conf	/etc/systemd/system/tailscaled.service.d/paperclip-network-policy.conf
 3984eb0cf601acd8f52370e5ee6713a5c112a946b21cb96950dc52eda0daa199	docs/agency-os-operating-guide.md	/opt/paperclip/integration/docs/agency-os-operating-guide.md
 0a038bd6df7d14de52c64b5da700a5339ebef85d894b6af4d228398c3a37ac6c	docs/architecture-security.md	/opt/paperclip/integration/docs/architecture-security.md
 024b142e0db4e6c119cf2a9b8628e0e6c0662578e6d4a144365a3eb5387f5666	docs/backup-restore.md	/opt/paperclip/integration/docs/backup-restore.md
@@ -39,7 +41,7 @@ a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f	files/systemd/p
 264143177fb45310ad7c0611ddf47408241180ed8673d548398f39e4d414e556	docs/operations-runbook.md	/opt/paperclip/integration/docs/operations-runbook.md
 62d3f55fdb7b64bc11fc3cf32cb16269a16b9cd477f5536cb3ea333f861eab92	docs/rollback.md	/opt/paperclip/integration/docs/rollback.md
 5e9ae2b9ea838c9df107e8978804afd6806c73f06a9985d5d6cabaa0966c6368	docs/supervisory-operating-model.md	/opt/paperclip/integration/docs/supervisory-operating-model.md
-b2ef23e2cffc53f7a7bd9de07d58d854d91d817f660fac2738b6361f654c176e	docs/versions-patches.md	/opt/paperclip/integration/docs/versions-patches.md
+764487e2f62fd95f8f23521c4016af670a5329b3f4f6ad5163225ffb6cca1eed	docs/versions-patches.md	/opt/paperclip/integration/docs/versions-patches.md
 053d434b95666ad1eb97fec05b8f0a197e0b53787a22e309c19e8e2c54dd5d1f	files/factory/config.yaml.template	/opt/paperclip/integration/factory/config.yaml.template
 26ccca7b778d29858b4b736a9efe6bfec4da38eada0059bf703433b8db78c9bd	files/factory/core-roles.tsv	/opt/paperclip/integration/factory/core-roles.tsv
 2352bff7d10bf630fffd2e7cc8a14b0404f0776d3739d70a46d09fbc3f7894ae	files/factory/core-roles/agency-director/AGENTS.md	/opt/paperclip/integration/factory/core-roles/agency-director/AGENTS.md
@@ -86,5 +88,5 @@ e779da7c1860f11eeed85fed5dc640a025d4c94ff854cb2a25146eea75ea1226	scripts/credent
 a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-role-transition	/usr/local/sbin/paperclip-core-role-transition
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
-167da1caea1e9fecfbbff330c15445edbeda4f6d0f2a45f9cb3c1728492e153d	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-027b7dac5067301320c60b52972a5168ca33c5bf15b25284dc68ff238f3c4991	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+6eb7e4b187e7d6b8ea243d78585adf45de3456a6dc4b24dfbd56cd68435545ee	verify.sh	/usr/local/sbin/paperclip-appliance-verify
+7f14b5fea4ba7f08f46faaae2032a946ad9acd9c3621d7b0988cec0d1f9fdcb9	appliance.lock	/opt/paperclip/integration/build/appliance.lock

@@ -43,26 +43,32 @@ docker_hook="-A DOCKER-USER -s $subnet -j PAPERCLIP-EGRESS"
 host_hook="-A INPUT -s $subnet -j PAPERCLIP-HOST"
 test "$($iptables -w -S DOCKER-USER | sed -n '2p')" = "$docker_hook"
 
-# Tailscale installs its own narrow INPUT hook at position one.  Permit that
-# one reviewed predecessor while keeping the Paperclip source-subnet hook ahead
-# of UFW and every other host rule.  Traffic from the Docker subnet does not
-# arrive on tailscale0 and must fall through ts-input into PAPERCLIP-HOST.
+# The Paperclip source-subnet hook is always first. Tailscale may follow it,
+# but no Tailscale rule is allowed to inspect container-originated packets first.
 first_input=$($iptables -w -S INPUT | sed -n '2p')
-case "$first_input" in
-  "$host_hook") ;;
-  '-A INPUT -j ts-input')
-    test "$($iptables -w -S INPUT | sed -n '3p')" = "$host_hook"
-    $iptables -w -C ts-input -i tailscale0 -j ACCEPT
-    if $iptables -w -S ts-input | grep -F -- "$subnet" >/dev/null; then
-      echo "Tailscale INPUT chain unexpectedly names the Paperclip subnet" >&2
-      exit 1
-    fi
-    ;;
-  *)
-    echo "unexpected rule before the Paperclip INPUT hook: $first_input" >&2
+test "$first_input" = "$host_hook" || {
+  echo "Paperclip INPUT hook is not first: $first_input" >&2
+  exit 1
+}
+
+ts_input_present=false
+if $iptables -w -S ts-input >/dev/null 2>&1; then
+  ts_input_present=true
+  test "$($iptables -w -S INPUT | sed -n '3p')" = '-A INPUT -j ts-input'
+  $iptables -w -C ts-input -i tailscale0 -j ACCEPT
+  $iptables -w -C ts-input -p udp --dport 41641 -j ACCEPT
+  if $iptables -w -S ts-input | grep -F -- "$subnet" >/dev/null; then
+    echo "Tailscale INPUT chain unexpectedly names the Paperclip subnet" >&2
     exit 1
-    ;;
-esac
+  fi
+  # A temporary RETURN counter proves the UDP/41641 packet never reaches
+  # Tailscale. RETURN is fail-closed because INPUT then reaches PAPERCLIP-HOST.
+  $iptables -w -I ts-input 1 -s "$subnet" -p udp --dport 41641 -j RETURN
+  cleanup_probe_rule() {
+    $iptables -w -D ts-input -s "$subnet" -p udp --dport 41641 -j RETURN 2>/dev/null || true
+  }
+  trap cleanup_probe_rule EXIT HUP INT TERM
+fi
 
 image=$(sed -n 's/^HERMES_DOCKER_IMAGE=//p' /opt/paperclip/integration/build/appliance.lock)
 /usr/bin/docker run --rm --network paperclip-hermes \
@@ -70,3 +76,12 @@ image=$(sed -n 's/^HERMES_DOCKER_IMAGE=//p' /opt/paperclip/integration/build/app
   --read-only --tmpfs /tmp:rw,noexec,nosuid,size=8m \
   --volume /opt/paperclip/ops/paperclip-network-probe.py:/probe.py:ro \
   --entrypoint python "$image" /probe.py
+if test "$ts_input_present" = true; then
+  sentinel_packets=$($iptables -w -L ts-input -v -n -x --line-numbers | awk '$1==1 {print $2}')
+  test "$sentinel_packets" = 0 || {
+    echo "container UDP/41641 reached Tailscale before PAPERCLIP-HOST" >&2
+    exit 1
+  }
+  cleanup_probe_rule
+  trap - EXIT HUP INT TERM
+fi

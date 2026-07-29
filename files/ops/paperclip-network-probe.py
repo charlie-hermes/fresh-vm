@@ -18,4 +18,15 @@ for denied_host, denied_port in (
     assert not can_connect(denied_host, denied_port), (
         f"prohibited route reachable: {denied_host}:{denied_port}"
     )
-print("network probes passed")
+print("TCP network probes passed")
+
+
+def send_udp_probe(host: str, port: int) -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+        probe.settimeout(1)
+        for _ in range(3):
+            probe.sendto(b"paperclip-container-udp-denial-probe", (host, port))
+
+
+send_udp_probe("172.30.0.1", 41641)
+print("UDP precedence probe sent")

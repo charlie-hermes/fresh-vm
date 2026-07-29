@@ -62,3 +62,29 @@ the clean-VM release gates.
 - `/var/lib/paperclip/agents/<core-role>/home/**`
 - `/srv/paperclip/workspaces/<core-role>/**`
 - Docker network `paperclip-hermes`
+
+
+## Fleet G2 foundation correction
+
+The bounded correction release pins reviewed Agency OS merge commit
+`a8c94b47833928db7533d5fc06fe4d4c285e92c6` and adds these appliance controls:
+
+- `PAPERCLIP-HOST` is always the first INPUT rule for the Hermes container
+  subnet; stale duplicates are removed before reinsertion;
+- a `tailscaled.service` post-start drop-in reasserts the rule after every
+  Tailscale start or restart, while the separately ordered mandatory policy
+  service handles boot ordering with Docker;
+- the network verifier sends a container UDP/41641 probe and proves it never
+  reaches Tailscale's chain;
+- Agency OS activation atomically migrates and initializes the protected Fleet
+  authority, requires the exact Paperclip company UUID pin, and immediately
+  runs the read-only G2 verifier;
+- the full appliance verifier authenticates Fleet DMA and checks the exact live
+  schema-2 tenant, hostname and only-Content-Engine entitlement state before
+  printing `AGENCY OS: LIVE`; and
+- every full verifier run writes the exact six gate lines, actual exit status,
+  boot ID and release/verifier checksums to protected durable evidence.
+
+The Python `jsonschema` Ubuntu package is pinned as a host prerequisite so the
+reviewed Agency OS schema tests also run on a clean appliance without an
+uncontrolled package download during release installation.

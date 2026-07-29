@@ -58,7 +58,8 @@ apt-get update
 apt-get install --yes \
   build-essential ca-certificates curl file git gnupg gzip iproute2 iptables \
   jq libffi-dev libssl-dev mount openssl pkg-config python3 python3-dev \
-  python3-venv tar util-linux xfsprogs
+  python3-jsonschema="$PYTHON_JSONSCHEMA_PACKAGE_VERSION" python3-venv \
+  tar util-linux xfsprogs
 
 key_download=$(mktemp)
 keyring_tmp=$(mktemp)
@@ -228,6 +229,10 @@ for unit in "$repo"/files/systemd/*; do
   install -o root -g root -m 0644 "$unit" "/etc/systemd/system/$(basename "$unit")"
 done
 install -d -o root -g root -m 0755 /etc/systemd/system/paperclip.service.d
+install -d -o root -g root -m 0755 /etc/systemd/system/tailscaled.service.d
+install -o root -g root -m 0644 \
+  "$repo/files/systemd-dropins/tailscaled-paperclip-network-policy.conf" \
+  /etc/systemd/system/tailscaled.service.d/paperclip-network-policy.conf
 systemctl daemon-reload
 systemctl enable paperclip.service paperclip-network-policy.service
 systemctl start paperclip-network-policy.service

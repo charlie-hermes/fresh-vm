@@ -17,6 +17,62 @@ test -f "$lock" || { echo "FAIL: appliance.lock is missing" >&2; exit 1; }
 # shellcheck disable=SC1090
 . "$lock"
 
+verification_lines=()
+verification_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+verification_result=/var/lib/paperclip-appliance/verification-result.json
+g2_result=null
+g2_result_checksum=
+required_lines='["PLATFORM: PASS","FUNCTIONAL ACCEPTANCE: PASS","AGENCY OS: LIVE","SECRET AUDIT: PASS","SYSTEMD FAILED UNITS: 0","PRODUCTION: READY"]'
+write_verification_evidence() {
+  exit_status=$?
+  trap - EXIT
+  if [ "$mode" = --platform-only ]; then
+    exit "$exit_status"
+  fi
+  if [ "${#verification_lines[@]}" -eq 0 ]; then
+    output_lines='[]'
+  else
+    output_lines=$(printf '%s\n' "${verification_lines[@]}" | jq -Rsc 'split("\n")[:-1]')
+  fi
+  status=failed
+  if [ "$exit_status" -eq 0 ] &&
+     jq -en --argjson output "$output_lines" --argjson required "$required_lines" \
+       '$output==$required' >/dev/null; then
+    status=pass
+  fi
+  verifier_sha256=$(sha256sum "${BASH_SOURCE[0]}" | awk '{print $1}')
+  lock_sha256=$(sha256sum "$lock" | awk '{print $1}')
+  assets_sha256=$(sha256sum /opt/paperclip/integration/build/locks/installed-assets.tsv 2>/dev/null | awk '{print $1}')
+  boot_id=$(tr -d '\n' </proc/sys/kernel/random/boot_id)
+  temporary=$(mktemp /var/lib/paperclip-appliance/.verification-result.XXXXXX)
+  jq -n \
+    --arg schema_version "1.0" --arg status "$status" \
+    --arg started_at "$verification_started_at" \
+    --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg boot_id "$boot_id" --arg agency_os_commit "$AGENCY_OS_COMMIT" \
+    --arg verifier_sha256 "$verifier_sha256" --arg appliance_lock_sha256 "$lock_sha256" \
+    --arg installed_assets_sha256 "$assets_sha256" \
+    --arg g2_result_checksum "$g2_result_checksum" \
+    --argjson exit_status "$exit_status" --argjson output_lines "$output_lines" \
+    --argjson required_lines "$required_lines" --argjson g2_summary "$g2_result" \
+    '{schema_version:$schema_version,status:$status,exit_status:$exit_status,
+      started_at:$started_at,completed_at:$completed_at,boot_id:$boot_id,
+      output_lines:$output_lines,required_lines:$required_lines,
+      agency_os_commit:$agency_os_commit,verifier_sha256:$verifier_sha256,
+      appliance_lock_sha256:$appliance_lock_sha256,
+      installed_assets_sha256:$installed_assets_sha256,
+      g2_result_checksum:$g2_result_checksum,g2_summary:$g2_summary}' >"$temporary"
+  chmod 0600 "$temporary"
+  chown root:root "$temporary"
+  mv -f "$temporary" "$verification_result"
+  exit "$exit_status"
+}
+trap write_verification_evidence EXIT
+
+gate_pass() {
+  verification_lines+=("$1")
+  printf '%s\n' "$1"
+}
 fail() { echo "FAIL: $*" >&2; exit 1; }
 hash_is() { test "$(sha256sum "$1" | awk '{print $1}')" = "$2"; }
 
@@ -40,6 +96,8 @@ platform_check() {
   test "$(dpkg-query -W -f='${Version}' runc)" = "$RUNC_PACKAGE_VERSION" ||
     fail "runc package drift"
   test "$(node --version)" = "v$NODE_VERSION" || fail "Node version drift"
+  test "$(dpkg-query -W -f='${Version}' python3-jsonschema)" = \
+    "$PYTHON_JSONSCHEMA_PACKAGE_VERSION" || fail "jsonschema package drift"
   test "$(/opt/hermes-agent/$HERMES_COMMIT/venv/bin/hermes --version |
     awk 'NR==1 {sub(/^v/,"",$3); print $3; exit}')" = \
     "$HERMES_VERSION" || fail "Hermes version drift"
@@ -181,7 +239,7 @@ platform_check() {
 }
 
 platform_check
-echo "PLATFORM: PASS"
+gate_pass "PLATFORM: PASS"
 if [ "$mode" = --platform-only ]; then
   exit 0
 fi
@@ -216,7 +274,7 @@ jq -e --arg boot "$current_boot" '.pass==true and .bootId==$boot and
     .agentsLoadedExactly==true and .managedInstructionsExact==true)' \
   /var/lib/paperclip/acceptance-evidence/functional-acceptance.json >/dev/null ||
   fail "functional evidence"
-echo "FUNCTIONAL ACCEPTANCE: PASS"
+gate_pass "FUNCTIONAL ACCEPTANCE: PASS"
 
 test "$(git -C /opt/agency-os/current rev-parse HEAD)" = "$AGENCY_OS_COMMIT" ||
   fail "Agency OS release drift"
@@ -251,6 +309,8 @@ jq -e --arg commit "$AGENCY_OS_COMMIT" \
    .isolation_brand.denial_created_tasks==false and
    .isolation_brand.paperclip_cost_event_recorded==false' "$evidence" >/dev/null ||
   fail "Agency OS live workflow evidence"
+g2_result=$(/opt/paperclip/ops/agency-os-g2-verify) || fail "Fleet G2 live foundation"
+g2_result_checksum=$(printf '%s' "$g2_result" | sha256sum | awk '{print $1}')
 portal=$(curl --fail --silent --show-error --max-time 5 \
   http://127.0.0.1:3180/api/status) || fail "Agency OS operator portal health"
 jq -e '.authority=="paperclip" and .projection=="read_only" and
@@ -258,7 +318,7 @@ jq -e '.authority=="paperclip" and .projection=="read_only" and
   (.portfolio.campaign_count>=3) and (.approvals|length)==3' \
   <<<"$portal" >/dev/null ||
   fail "Agency OS operator portal evidence"
-echo "AGENCY OS: LIVE"
+gate_pass "AGENCY OS: LIVE"
 
 /opt/paperclip/ops/paperclip-secret-audit.sh >/dev/null
 jq -e '.pass==true and .credentialValuesCompared>0 and .runsScanned>0 and
@@ -266,12 +326,12 @@ jq -e '.pass==true and .credentialValuesCompared>0 and .runsScanned>0 and
   .rawBearerOccurrences==0 and .genericTokenSignatureOccurrences==0' \
   /var/lib/paperclip/acceptance-evidence/secret-audit.json >/dev/null ||
   fail "secret audit evidence"
-echo "SECRET AUDIT: PASS"
+gate_pass "SECRET AUDIT: PASS"
 
 failed_units=$(systemctl --failed --no-legend --plain | awk 'NF {count++} END {print count+0}')
 test "$failed_units" -eq 0 || {
   systemctl --failed --no-pager >&2
   fail "$failed_units failed systemd unit(s)"
 }
-echo "SYSTEMD FAILED UNITS: 0"
-echo "PRODUCTION: READY"
+gate_pass "SYSTEMD FAILED UNITS: 0"
+gate_pass "PRODUCTION: READY"

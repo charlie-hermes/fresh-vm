@@ -88,6 +88,11 @@ def main() -> None:
     private_key = identity.get("privateKeyHex", "")
     if not isinstance(private_key, str) or not private_key:
         raise SystemExit("Buzz private identity is incomplete")
+    agent_ids = json.loads(Path("/etc/paperclip/hermes-agent-ids.json").read_text())
+    agency_director_id = agent_ids.get("agency-director")
+    if not isinstance(agency_director_id, str) or not agency_director_id:
+        raise SystemExit("Agency Director is not registered in Paperclip")
+
 
     lock = load_env(Path("/opt/paperclip/integration/build/appliance.lock"))
     expected_buzz = lock["AGENCY_OS_BUZZ_SHA256"]
@@ -178,6 +183,7 @@ def main() -> None:
         asset_id=f"asset_live_{suffix}",
         brand_name="Agency OS Live Acceptance",
         product_tier="search_authority_social",
+        cost_agent_id=agency_director_id,
     )
     social = run_social_workflow(
         core=core,
@@ -201,6 +207,7 @@ def main() -> None:
         asset_id=f"asset_isolation_{suffix}",
         brand_name="Agency OS Isolation Brand",
         product_tier="search_authority_core",
+        cost_agent_id=None,
     )
     before_denial = len(isolation_paperclip.list_tasks())
     try:
@@ -248,6 +255,7 @@ def main() -> None:
             "approval_id": core.approval["id"],
             "approval_status": core.approval["status"],
             "buzz_channel_id": core.records["buzz_decision_writeback"]["payload"]["buzz_channel_id"],
+            "paperclip_cost_event_recorded": True,
         },
         "social": {
             "campaign_id": f"camp_live_social_{suffix}",
@@ -265,6 +273,7 @@ def main() -> None:
             "approval_status": isolation_core.approval["status"],
             "cross_brand_social_denied": True,
             "denial_created_tasks": False,
+            "paperclip_cost_event_recorded": False,
         },
     }
     atomic_json(

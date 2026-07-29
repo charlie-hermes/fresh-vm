@@ -80,8 +80,13 @@ grep -q 'container UDP/41641 reached Tailscale' files/ops/paperclip-network-veri
 ! grep -q 'Permit that.*predecessor' files/ops/paperclip-network-verify
 grep -q 'while.*INPUT.*host_chain' files/ops/paperclip-network-policy
 test -f files/systemd-dropins/tailscaled-paperclip-network-policy.conf
-grep -qx 'ExecStartPost=-/opt/paperclip/ops/paperclip-network-policy' \
+grep -qx 'ExecStartPost=-/opt/paperclip/ops/paperclip-network-after-tailscale' \
   files/systemd-dropins/tailscaled-paperclip-network-policy.conf
+grep -q 'BackendState' files/ops/paperclip-network-after-tailscale
+grep -q 'state.*Running' files/ops/paperclip-network-after-tailscale
+grep -q 'iptables -C INPUT -j ts-input' files/ops/paperclip-network-after-tailscale
+grep -q 'exec /opt/paperclip/ops/paperclip-network-policy' \
+  files/ops/paperclip-network-after-tailscale
 grep -q 'tailscaled.service.d/paperclip-network-policy.conf' bootstrap.sh
 grep -q 'agency-os-g2-verify' files/ops/agency-os-activate
 grep -q 'agency-os-g2-verify' verify.sh

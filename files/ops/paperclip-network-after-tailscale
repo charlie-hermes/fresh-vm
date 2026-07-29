@@ -1,0 +1,24 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# tailscaled reports systemd readiness before its first control-plane map has
+# finished installing the ts-input hook. Wait for that final state so our
+# source guard is inserted after Tailscale's last startup firewall rewrite.
+for _ in $(seq 1 150); do
+  state=$(tailscale status --json 2>/dev/null |
+    /opt/paperclip/ops/jq -r '.BackendState // empty' 2>/dev/null || true)
+  if [ "$state" = Running ] && iptables -C INPUT -j ts-input 2>/dev/null; then
+    sleep 1
+    exec /opt/paperclip/ops/paperclip-network-policy
+  fi
+  case "$state" in
+    NeedsLogin|Stopped)
+      exec /opt/paperclip/ops/paperclip-network-policy
+      ;;
+  esac
+  sleep 0.2
+done
+
+echo "Tailscale did not reach a stable firewall state before policy reapply" >&2
+exit 1

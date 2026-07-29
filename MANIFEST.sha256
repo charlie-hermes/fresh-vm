@@ -65,6 +65,7 @@ a089594a127337e33813e19d7fc30e01ce54034201aaed905d66e85637a3d1de  ./files/ops/pa
 09ac8a59bb324b4caec335bdc9ebc0f9b3fca8513cc6ecae2d34879301a8b090  ./files/ops/paperclip-http-denial-check
 6be93b31fd592a71af0f90eccc6bfd82be14fc705b3359b92bf9859e007b3615  ./files/ops/paperclip-integration-regression
 8d97f143ae87ce77f977d6a79df87d29dfff2908dca4f7279d9bec8494e7e458  ./files/ops/paperclip-issue-update
+2c44e596f31651e29aa15570d550b0eb2db6c967c7eeb6157c036877438d11e3  ./files/ops/paperclip-network-after-tailscale
 e328a611531bd84cf7eb67e44d62d25bb937b250abbddf0d5f71ff884b66cfc5  ./files/ops/paperclip-network-policy
 1c8e265abd05ce84d28966c7efdd4d7f675d4300dd82bd4d4e93340fd62f6fe3  ./files/ops/paperclip-network-probe.py
 062772e77e930b26fd17153f484c63ac74a45e376f1e12642f6c6cf39c199289  ./files/ops/paperclip-network-verify
@@ -82,7 +83,7 @@ e692d9caefff952a6ef12296dccdf8080ae23c00b7bda0a2bd26e4737928f426  ./files/paperc
 59de0c5b0879e2e5e4ad8b1fbc31fdc5d5bebbe707f20f3b4f253a6420130634  ./files/paperclip/AGENTS-research.md
 e810e41a42d9d7b545179a6e5b8c1cb1552ee876bbbda63a661ae2c49b03cf31  ./files/paperclip/config.json
 f41d7b261f6a6ae3095b46c02140676a3be504f0ed6cb51deeb6f55af6004c6e  ./files/paperclip/offsite-backup.conf.example
-9708035a18510d1a55e887287c4014ea20f0a845706656e0757101a6bf3e86ce  ./files/systemd-dropins/tailscaled-paperclip-network-policy.conf
+8fdee08b243411fdd266adb11fb4cf668231be15b863c5adcbbeaa66dbff61eb  ./files/systemd-dropins/tailscaled-paperclip-network-policy.conf
 fdaece8aaa51db5b5852604664caaf240ed064c10a8b432bff58744b575bc458  ./files/systemd/agency-os-operator.service
 8720c8a0a5346721b76970e195d30411ca7d221e63e6e7e4c2acbf0778076d84  ./files/systemd/paperclip-backup.service
 c8886307ea7c3eeb756af69c129586867c1e7d246e184f2612a58552057e162b  ./files/systemd/paperclip-backup.timer
@@ -95,7 +96,7 @@ ae079d8c6a8029d5b9952257791398897f580ccf231b290a37756f754412ce05  ./files/system
 a59fca0a924537b2a1483340f36081b9982aa9257eff9a349a5a84142866ed84  ./files/systemd/paperclip-soak-sample.timer
 a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f  ./files/systemd/paperclip.service
 6b535ca10a989773521086ae80eb7ab90fdc6da1cae757e46f723be822b522c7  ./locks/hermes-ddgs.requirements.txt
-af768142658399ad8d30deeba413ba5b1de6f06b631f3b69cbcdde894987edcb  ./locks/installed-assets.tsv
+59775da26cb0780578e19219973fe89377333b1abca75e40f8aa6725fa72e4aa  ./locks/installed-assets.tsv
 974cf04cdd2f3e2fb8e55c7cc5f310842cc5fe48ae3e64bb80bab940c0de5331  ./locks/overlays.tsv
 209fa78fa15b073880c1b9466214bd9ba38c39f8cac12e62ea6aadec55386536  ./locks/paperclip/package-lock.json
 3b5f830e5b9023f4a03699827fa82f7add4f0334b8ed34c28b6104a44a19fde8  ./locks/paperclip/package.json
@@ -130,7 +131,7 @@ fefdb59de96c5720fa699508c980262abe1b4d11582f0b934819219793298362  ./tests/core-t
 f60c797742712a768a3b468c565f96a67c77f40844da310198915130da42f0d9  ./tests/generate-installed-assets.sh
 aec535ad5bb543925f6709a429a40b9277458f05e148461f795d4c0406ffac2e  ./tests/generate-manifest.sh
 db2510658bce5e689c25568c31878309b04b58a7a0e839faf060c64eb37c4cbf  ./tests/http-denial-evidence.sh
-a1fac00d9011413c3652ae9ef63c21d1ded5a77466520bf14777f21a600dff03  ./tests/static.sh
+fada5738c226c81847271e0ae858c28556cba3c5bb4b59a015a7bcb33e698066  ./tests/static.sh
 56feb085c60010df79b867b8e282c86bca3a241061d25e184c0cd583f3616ea4  ./tests/tool-completion.sh
 8ba3c8dbf852282b61b7d9684001337b1b453e87e322965e74af218a1a146bda  ./tests/upstream.sh
 6eb7e4b187e7d6b8ea243d78585adf45de3456a6dc4b24dfbd56cd68435545ee  ./verify.sh

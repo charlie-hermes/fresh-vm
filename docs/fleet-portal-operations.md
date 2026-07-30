@@ -15,9 +15,9 @@ G2.6 runs four separate services:
 - `fleet-ingest-worker.service` scans and extracts uploads without network
   access. Its output always requires review.
 
-The installer also synchronises the bounded `FL2-80A` through `FL2-80D`
-Paperclip task graph. `FL2-90` remains blocked by `FL2-80D`; installing the
-portal never starts the first external client gate.
+The installer verifies the complete pinned Fleet Generation 2 Paperclip task
+graph, including every required dependency. It preserves additional human-added
+blockers and never starts the first external-client gate.
 
 Paperclip remains private at `172.30.0.1:3100`. The client portal must be
 reached through Cloudflare Access and a Cloudflare Tunnel to the loopback web
@@ -37,7 +37,7 @@ Create these in Cloudflare Zero Trust:
 
 1. a client Access application for `fleet.madebyfleet.com`;
 2. a separate Fleet-only Access application for `admin.madebyfleet.com`;
-3. an Access audience for the portal;
+3. distinct Access audiences for the client and admin applications;
 4. a Tunnel route from both hosts to `http://127.0.0.1:3190`; and
 5. policies that deny access unless the expected identity is present.
 
@@ -57,14 +57,27 @@ NEXT_PUBLIC_WORKOS_REDIRECT_URI=https://fleet.madebyfleet.com/auth/callback
 FLEET_WORKOS_ORGANIZATION_ID=org_replace
 FLEET_OWNER_WORKOS_SUBJECT=user_replace
 CLOUDFLARE_ACCESS_TEAM_DOMAIN=replace.cloudflareaccess.com
-CLOUDFLARE_ACCESS_AUDIENCE=replace
+CLOUDFLARE_PORTAL_ACCESS_AUDIENCE=replace_with_client_app_aud
+CLOUDFLARE_ADMIN_ACCESS_AUDIENCE=replace_with_admin_app_aud
 FLEET_PORTAL_ADMIN_USER_IDS=user_replace
+CLOUDFLARE_API_TOKEN=replace_with_read_only_commissioning_token
+CLOUDFLARE_ACCOUNT_ID=replace
+CLOUDFLARE_TUNNEL_ID=replace
+CLOUDFLARE_PORTAL_ACCESS_APP_ID=replace
+CLOUDFLARE_ADMIN_ACCESS_APP_ID=replace
 ```
 
-If a real, still-pending Paperclip approval is ready to display, the file may
-also contain both `FLEET_PORTAL_ACTIVE_APPROVAL_ID` and
-`FLEET_PORTAL_ACTIVE_APPROVAL_CHECKSUM`. The checksum must come from the
-reviewed read projection; it is not invented by the portal.
+Do not add an approval ID to this configuration. Once a client has confirmed a
+fact in the Launch Room, Fleet creates its exact Paperclip decision packet with:
+
+```bash
+sudo fleet-portal-prepare-approval --candidate-id candidate_replace
+```
+
+The command checkpoints the request before contacting Paperclip, reads the
+pending approval back, binds it to the exact source, candidate and review
+checksums, and is safe to rerun. If Paperclip's outcome is uncertain, it stops
+for reconciliation instead of creating a second approval.
 
 Then run:
 
@@ -72,9 +85,11 @@ Then run:
 sudo fleet-portal-configure /absolute/secure/path/fleet-portal.env
 ```
 
-The command validates the file, saves only the service configuration with mode
-`0600`, admits the Fleet DMA owner, materialises the one honest controlled
-content item and starts the four services. It never prints a secret.
+The command validates the file, proves the WorkOS organisation and owner,
+proves the healthy Cloudflare Tunnel, exact loopback routes, separate Access
+applications and policies, saves only the service configuration with mode
+`0600`, admits the Fleet DMA owner, and starts the four services. It never
+prints a secret.
 
 ## Cloudflare health and exposure
 

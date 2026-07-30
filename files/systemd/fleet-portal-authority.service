@@ -4,9 +4,12 @@ After=local-fs.target
 
 [Service]
 Type=simple
+User=fleet-authority
+Group=fleet-authority
+SupplementaryGroups=fleet-authority-client fleet-ingest
 EnvironmentFile=/etc/agency-os/fleet-authority.env
 WorkingDirectory=/opt/agency-os/current
-ExecStart=/usr/bin/python3 -m agency_os.fleet_portal_authority_host --database /var/lib/agency-os/fleet-portal.sqlite3 --socket /run/agency-os/fleet-authority.sock
+ExecStart=/usr/bin/python3 -m agency_os.fleet_portal_authority_host --database /var/lib/agency-os/fleet-portal.sqlite3 --tenant-authority-database /var/lib/agency-os/fleet-tenancy.sqlite3 --brand-intelligence-database /var/lib/agency-os/fleet-brand-intelligence.sqlite3 --review-spool /var/spool/agency-os/fleet-ingest/review --socket /run/agency-os/fleet-authority.sock
 Restart=on-failure
 RestartSec=3
 UMask=0077
@@ -24,7 +27,11 @@ ProtectHostname=true
 RestrictSUIDSGID=true
 LockPersonality=true
 RestrictAddressFamilies=AF_UNIX
-ReadWritePaths=/var/lib/agency-os /run/agency-os
+ReadWritePaths=/var/lib/agency-os /run/agency-os /var/spool/agency-os/fleet-ingest/review
+PrivateDevices=true
+ProtectProc=invisible
+CapabilityBoundingSet=
+AmbientCapabilities=
 
 [Install]
 WantedBy=multi-user.target

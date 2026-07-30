@@ -8,7 +8,7 @@ Requires=fleet-portal-authority.service
 Type=simple
 User=fleet-portal
 Group=fleet-portal
-SupplementaryGroups=fleet-ingest
+SupplementaryGroups=fleet-ingest fleet-authority-client
 EnvironmentFile=/etc/agency-os/fleet-portal.env
 Environment=NODE_ENV=production
 Environment=HOSTNAME=127.0.0.1

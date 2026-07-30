@@ -104,6 +104,20 @@ platform_check() {
   test "$(node --version)" = "v$NODE_VERSION" || fail "Node version drift"
   test "$(dpkg-query -W -f='${Version}' python3-jsonschema)" = \
     "$PYTHON_JSONSCHEMA_PACKAGE_VERSION" || fail "jsonschema package drift"
+  test "$(dpkg-query -W -f='${Version}' clamav)" = "$CLAMAV_PACKAGE_VERSION" ||
+    fail "ClamAV package drift"
+  test "$(dpkg-query -W -f='${Version}' poppler-utils)" = "$POPPLER_UTILS_PACKAGE_VERSION" ||
+    fail "Poppler package drift"
+  test "$(dpkg-query -W -f='${Version}' tesseract-ocr)" = "$TESSERACT_OCR_PACKAGE_VERSION" ||
+    fail "Tesseract package drift"
+  for package in clamav poppler-utils tesseract-ocr; do
+    apt-mark showhold | grep -qx "$package" || fail "$package is not held at its appliance pin"
+  done
+  systemctl is-active --quiet clamav-freshclam.service || fail "ClamAV signature updater inactive"
+  signature=$(find /var/lib/clamav -maxdepth 1 -type f \
+    \( -name 'daily.cvd' -o -name 'daily.cld' -o -name 'main.cvd' -o -name 'main.cld' \) \
+    -mmin -2880 -print -quit)
+  test -n "$signature" || fail "ClamAV signatures are absent or stale"
   test "$(/opt/hermes-agent/$HERMES_COMMIT/venv/bin/hermes --version |
     awk 'NR==1 {sub(/^v/,"",$3); print $3; exit}')" = \
     "$HERMES_VERSION" || fail "Hermes version drift"
@@ -117,6 +131,11 @@ platform_check() {
     fail "network policy rules or live probes"
   systemctl is-active --quiet paperclip.service || fail "Paperclip inactive"
   systemctl is-enabled --quiet paperclip.service || fail "Paperclip not enabled"
+  for service in fleet-portal-authority.service fleet-portal-command-worker.service \
+    fleet-ingest-worker.service fleet-portal-web.service; do
+    systemctl is-enabled --quiet "$service" || fail "$service not enabled"
+    systemctl is-active --quiet "$service" || fail "$service not active"
+  done
   for timer in paperclip-health.timer paperclip-soak-sample.timer; do
     systemctl is-enabled --quiet "$timer" || fail "$timer not enabled"
     systemctl is-active --quiet "$timer" || fail "$timer not active"
@@ -147,6 +166,51 @@ platform_check() {
   if ss -ltnH | awk '{print $4}' | grep -Eq "^(0\\.0\\.0\\.0|\\*):$PAPERCLIP_PORT$"; then
     fail "Paperclip exposed on a wildcard address"
   fi
+  ss -ltnH | awk '{print $4}' | grep -qx '127.0.0.1:3190' ||
+    fail "Fleet portal loopback bind address"
+  if ss -ltnH | awk '{print $4}' | grep -Eq '^(0\.0\.0\.0|\*):3190$'; then
+    fail "Fleet portal exposed on a wildcard address"
+  fi
+  curl --fail --silent --max-time 5 http://127.0.0.1:3190/health |
+    jq -e '.status=="pass" and .service=="fleet-portal-web" and
+      .authority=="fleet_portal"' >/dev/null || fail "Fleet portal authority health"
+  test "$(stat -c '%a:%U' /etc/agency-os/fleet-portal.env)" = "600:root" ||
+    fail "Fleet portal credential permissions"
+  for database in fleet-tenancy.sqlite3 fleet-brand-intelligence.sqlite3 fleet-portal.sqlite3; do
+    test "$(stat -c '%a:%U:%G' "/var/lib/agency-os/$database")" =       "600:fleet-authority:fleet-authority" || fail "Fleet authority database permissions: $database"
+  done
+  test -S /run/agency-os/fleet-authority.sock || fail "Fleet authority socket"
+  test "$(systemctl show -p User --value fleet-portal-web.service)" = fleet-portal ||
+    fail "Fleet portal web service identity"
+  test "$(systemctl show -p User --value fleet-portal-authority.service)" = fleet-authority ||
+    fail "Fleet authority service identity"
+  test "$(systemctl show -p User --value fleet-portal-command-worker.service)" = fleet-command ||
+    fail "Fleet command worker service identity"
+  systemctl cat fleet-portal-command-worker.service | grep -qx 'IPAddressDeny=any' ||
+    fail "Fleet command worker egress deny policy"
+  systemctl cat fleet-portal-command-worker.service | grep -qx 'IPAddressAllow=172.30.0.1' ||
+    fail "Fleet command worker Paperclip-only egress policy"
+  ! systemctl show -p EnvironmentFiles --value fleet-portal-command-worker.service |     grep -q '/etc/paperclip/operator.env' ||
+    fail "Fleet command worker still receives operator credentials"
+  test "$(stat -c '%a:%U:%G' /etc/agency-os/fleet-command-paperclip.env)" = "640:root:fleet-command" ||
+    fail "Fleet command-worker credential permissions"
+  operator_token=$(awk -F= '$1=="PAPERCLIP_BOARD_API_KEY" {print $2}' /etc/paperclip/operator.env)
+  worker_token=$(awk -F= '$1=="PAPERCLIP_BOARD_TOKEN" {print $2}' /etc/agency-os/fleet-command-paperclip.env)
+  test -n "$operator_token" && test -n "$worker_token" && test "$operator_token" != "$worker_token" ||
+    fail "Fleet command worker does not have a distinct Paperclip credential"
+  unset operator_token worker_token
+  sudo -u fleet-authority test ! -r /etc/agency-os/fleet-command-paperclip.env ||
+    fail "Fleet authority can read the command-worker credential"
+  id -nG fleet-command | tr ' ' '\n' | grep -qx fleet-authority-client ||
+    fail "Fleet command worker lacks authority-socket group"
+  ! id -nG fleet-authority | tr ' ' '\n' | grep -qx fleet-command ||
+    fail "Fleet authority retains command-credential group access"
+  systemctl show -p SupplementaryGroups --value fleet-portal-web.service |
+    grep -qw fleet-ingest || fail "Fleet portal ingest boundary"
+  test "$(systemctl show -p PrivateNetwork --value fleet-ingest-worker.service)" = yes ||
+    fail "Fleet ingest network isolation"
+  ! systemctl show -p Environment --value fleet-portal-web.service |
+    grep -q 'PAPERCLIP_' || fail "Paperclip credential leaked to Fleet web service"
   ss -ltnH | awk '{print $4}' | grep -qx '127.0.0.1:54329' ||
     fail "embedded database bind address"
 
@@ -161,6 +225,10 @@ platform_check() {
     /etc/paperclip/paperclip.env || fail "legacy JWT fallback"
   test "$(stat -c '%a:%U' /etc/paperclip/operator.env)" = "600:root" ||
     fail "operator credential permissions"
+  /usr/local/sbin/fleet-portal-paperclip-sync --verify-only >/dev/null ||
+    fail "Fleet G2.6 Paperclip task graph"
+  /usr/local/sbin/fleet-portal-external-verify >/dev/null ||
+    fail "Fleet portal external WorkOS and Cloudflare commissioning"
 
   company_id=$(tr -d '\n' </etc/paperclip/company-id)
   agents=$(/opt/paperclip/ops/paperclip-board-api GET "/companies/$company_id/agents")

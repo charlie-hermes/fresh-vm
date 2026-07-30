@@ -26,6 +26,10 @@ f34cf18da88a1c76e75a2ff8c659ed89c2412b482c1efa69519664206e6aeb8a	files/ops/paper
 6091214434de196d9595bc8047b6e07e6d0d65f009a5ed117cfb9863287a6e18	files/ops/paperclip-verify-encrypted-backup.sh	/opt/paperclip/ops/paperclip-verify-encrypted-backup.sh
 84e9f9375edd9a216a6b351c4b6450bbb7397da8b435efed8d01eaee07ee078b	files/systemd/agency-os-brand-agent.service	/etc/systemd/system/agency-os-brand-agent.service
 fdaece8aaa51db5b5852604664caaf240ed064c10a8b432bff58744b575bc458	files/systemd/agency-os-operator.service	/etc/systemd/system/agency-os-operator.service
+34af896cba97988fcd3b7f16047c481fb25a1983896b2b78a17ea48c31706bf9	files/systemd/fleet-ingest-worker.service	/etc/systemd/system/fleet-ingest-worker.service
+6b63c0412c934ba0526944f87606afc84b6faa61966f691faa6c928648156634	files/systemd/fleet-portal-authority.service	/etc/systemd/system/fleet-portal-authority.service
+9f8680e9b305473d184a55b11e8efdd0cb0ce22867be43044e56a0e628350f19	files/systemd/fleet-portal-command-worker.service	/etc/systemd/system/fleet-portal-command-worker.service
+09d763de08793dfb214a3d1048682db905a8430482b41459204421b19109b571	files/systemd/fleet-portal-web.service	/etc/systemd/system/fleet-portal-web.service
 8720c8a0a5346721b76970e195d30411ca7d221e63e6e7e4c2acbf0778076d84	files/systemd/paperclip-backup.service	/etc/systemd/system/paperclip-backup.service
 c8886307ea7c3eeb756af69c129586867c1e7d246e184f2612a58552057e162b	files/systemd/paperclip-backup.timer	/etc/systemd/system/paperclip-backup.timer
 d1a1a388ac3707c67a9cdf0c7c7108f7312c62dd853afe1ccf3b3cdcd4ca327a	files/systemd/paperclip-health.service	/etc/systemd/system/paperclip-health.service
@@ -42,6 +46,7 @@ a86722baef8fc780054e576e9df5a58aaefdac13816979ac095371be4305c28f	files/systemd/p
 024b142e0db4e6c119cf2a9b8628e0e6c0662578e6d4a144365a3eb5387f5666	docs/backup-restore.md	/opt/paperclip/integration/docs/backup-restore.md
 812dcd00fd848c9666d02d6ab8b61172f091ccfc47322d44e39c41b8622fae3c	docs/core-role-activation.md	/opt/paperclip/integration/docs/core-role-activation.md
 950af25ed9445d80d6e1e783440e52c145293a518f7559b871c4a177b1753993	docs/employee-operations.md	/opt/paperclip/integration/docs/employee-operations.md
+60bb05f1c4e19e1cd9d00d75db6a02de5446e7fbb4648bd0ac98f83bbdb8d462	docs/fleet-portal-operations.md	/opt/paperclip/integration/docs/fleet-portal-operations.md
 264143177fb45310ad7c0611ddf47408241180ed8673d548398f39e4d414e556	docs/operations-runbook.md	/opt/paperclip/integration/docs/operations-runbook.md
 62d3f55fdb7b64bc11fc3cf32cb16269a16b9cd477f5536cb3ea333f861eab92	docs/rollback.md	/opt/paperclip/integration/docs/rollback.md
 5e9ae2b9ea838c9df107e8978804afd6806c73f06a9985d5d6cabaa0966c6368	docs/supervisory-operating-model.md	/opt/paperclip/integration/docs/supervisory-operating-model.md
@@ -91,6 +96,13 @@ a2f7e34b0eb1fb8f1faaab0a379be206f4c86c98efe446175ec3727ef2d4b7aa	scripts/profile
 e779da7c1860f11eeed85fed5dc640a025d4c94ff854cb2a25146eea75ea1226	scripts/credential-install	/usr/local/sbin/paperclip-hermes-credential-install
 a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-role-transition	/usr/local/sbin/paperclip-core-role-transition
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
-867141249135264b498731f596cfb632e764880d77556f3e709798ac791e2e45	scripts/agency-os-install	/usr/local/sbin/agency-os-install
-de77c4fa5ef031bd7821b565e97ca631c3c3e1cd4ff759a8afb4ac5b222a6568	verify.sh	/usr/local/sbin/paperclip-appliance-verify
-4784ea027658fb0135f65fb9d3a656523ea8f10a3c039ed0e7ae247c7caa7a01	appliance.lock	/opt/paperclip/integration/build/appliance.lock
+ad9a38badf7b18ac0402d7da5ad1376764f078e2e26eb9de1769284ff0d9c22c	scripts/agency-os-install	/usr/local/sbin/agency-os-install
+1a803ed7218a9471c585eff23b1b82f5ec61d94479e0bef589d2cbb472a923f7	scripts/fleet-portal-install	/usr/local/sbin/fleet-portal-install
+d70160f0afb66e95c8928b79ed251a97c29308bf17513790b6f1f848488d126e	scripts/fleet-portal-configure	/usr/local/sbin/fleet-portal-configure
+2d7dbc19883fd6a3b13e6e259a500815d0f2cf85b7a950017705b6bb0f0df65f	scripts/fleet-portal-mutations	/usr/local/sbin/fleet-portal-mutations
+80b5e59c8434c72e54b7d6ab5d6e6af2570a3f93c10d8d18e7640fd4af8517ca	scripts/fleet-portal-paperclip-sync	/usr/local/sbin/fleet-portal-paperclip-sync
+fc3cb2a486aeaf8bbd7ef7a3d7b04057722f88d76efaa8664e830cb51929db4e	scripts/fleet-portal-credential-provision	/usr/local/sbin/fleet-portal-credential-provision
+e879325a0998427cee7c860123572a92a0b5b1bc9b66ca36daafd28167fcce2c	scripts/fleet-portal-external-verify	/usr/local/sbin/fleet-portal-external-verify
+f9358c85864bf4dec99e1771a7a3618457fbbe2f2064c3df854f9584e36cb42c	scripts/fleet-portal-prepare-approval	/usr/local/sbin/fleet-portal-prepare-approval
+12f57a1f2675022591b351e5ca9d35aea76209ebd61ec3b2ad6d3f49aff7ce7e	verify.sh	/usr/local/sbin/paperclip-appliance-verify
+a1ffad70e30c5363f71313e68f724cc3cf616f5ae03b301fcd7418ccea46a729	appliance.lock	/opt/paperclip/integration/build/appliance.lock

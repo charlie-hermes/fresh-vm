@@ -1,0 +1,78 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+source_file=${1:-/etc/agency-os/fleet-commissioning.env}
+test "${source_file#/}" != "$source_file" && test -f "$source_file" && test ! -L "$source_file" || {
+  echo "commissioning configuration must be an absolute regular file" >&2
+  exit 65
+}
+value() { grep -m1 "^$1=" "$source_file" | cut -d= -f2-; }
+workos_key=$(value WORKOS_API_KEY)
+organization=$(value FLEET_WORKOS_ORGANIZATION_ID)
+owner_subject=$(value FLEET_OWNER_WORKOS_SUBJECT)
+cf_token=$(value CLOUDFLARE_API_TOKEN)
+cf_account=$(value CLOUDFLARE_ACCOUNT_ID)
+cf_tunnel=$(value CLOUDFLARE_TUNNEL_ID)
+portal_app=$(value CLOUDFLARE_PORTAL_ACCESS_APP_ID)
+admin_app=$(value CLOUDFLARE_ADMIN_ACCESS_APP_ID)
+portal_audience=$(value CLOUDFLARE_PORTAL_ACCESS_AUDIENCE)
+admin_audience=$(value CLOUDFLARE_ADMIN_ACCESS_AUDIENCE)
+test "$portal_app" != "$admin_app" && test "$portal_audience" != "$admin_audience" || {
+  echo "client and admin Access applications and audiences must be distinct" >&2
+  exit 1
+}
+
+authenticated_get() {
+  local url=$1 token=$2
+  printf '%s\n'     'silent' 'show-error' 'fail' 'max-time = 15'     "header = Authorization: Bearer $token" "url = $url" |
+    curl --config -
+}
+workos_org=$(authenticated_get "https://api.workos.com/organizations/$organization" "$workos_key")
+jq -e --arg id "$organization" '.id==$id' <<<"$workos_org" >/dev/null || {
+  echo "WorkOS organisation readback failed" >&2; exit 1;
+}
+workos_user=$(authenticated_get "https://api.workos.com/user_management/users/$owner_subject" "$workos_key")
+jq -e --arg id "$owner_subject" '.id==$id and .email_verified==true' <<<"$workos_user" >/dev/null || {
+  echo "WorkOS owner readback failed" >&2; exit 1;
+}
+workos_memberships=$(authenticated_get   "https://api.workos.com/user_management/organization_memberships?user_id=$owner_subject&organization_id=$organization"   "$workos_key")
+jq -e --arg user "$owner_subject" --arg org "$organization"   '.data | any(.[]; .user_id==$user and .organization_id==$org and .status=="active")'   <<<"$workos_memberships" >/dev/null || {
+    echo "WorkOS owner has no active organisation membership" >&2; exit 1;
+  }
+cf_base="https://api.cloudflare.com/client/v4/accounts/$cf_account"
+tunnel=$(authenticated_get "$cf_base/cfd_tunnel/$cf_tunnel" "$cf_token")
+jq -e --arg id "$cf_tunnel"   '.success==true and .result.id==$id and .result.deleted_at==null and .result.status=="healthy"'   <<<"$tunnel" >/dev/null || { echo "Cloudflare tunnel is absent or unhealthy" >&2; exit 1; }
+tunnel_config=$(authenticated_get "$cf_base/cfd_tunnel/$cf_tunnel/configurations" "$cf_token")
+jq -e '.success==true and
+  (.result.config.ingress | any(.[]; .hostname=="fleet.madebyfleet.com" and .service=="http://127.0.0.1:3190")) and
+  (.result.config.ingress | any(.[]; .hostname=="admin.madebyfleet.com" and .service=="http://127.0.0.1:3190"))'   <<<"$tunnel_config" >/dev/null || {
+    echo "Cloudflare tunnel ingress does not match the two Fleet loopback routes" >&2; exit 1;
+  }
+for binding in   "$portal_app|fleet.madebyfleet.com|$portal_audience"   "$admin_app|admin.madebyfleet.com|$admin_audience"; do
+  app_id=${binding%%|*}
+  remainder=${binding#*|}
+  domain=${remainder%%|*}
+  audience=${remainder#*|}
+  app=$(authenticated_get "$cf_base/access/apps/$app_id" "$cf_token")
+  jq -e --arg id "$app_id" --arg domain "$domain" --arg aud "$audience"     '.success==true and .result.id==$id and .result.domain==$domain and
+     ((.result.aud // .result.aud_tag // []) | if type=="array" then index($aud)!=null else .==$aud end)'     <<<"$app" >/dev/null || { echo "Cloudflare Access application readback failed for $domain" >&2; exit 1; }
+  policies=$(authenticated_get "$cf_base/access/apps/$app_id/policies" "$cf_token")
+  jq -e '.success==true and (.result|type=="array") and (.result|length)>0 and
+    any(.result[]; .decision=="allow")' <<<"$policies" >/dev/null || {
+      echo "Cloudflare Access has no allow policy for $domain" >&2; exit 1;
+    }
+done
+for host in fleet.madebyfleet.com admin.madebyfleet.com; do
+  response=$(curl --silent --show-error --max-time 15 --output /dev/null     --write-out '%{http_code} %{redirect_url}' "https://$host/")
+  code=${response%% *}; redirect=${response#* }
+  case "$code" in 302|303) ;; *)
+    echo "unauthenticated HTTPS route was not intercepted by Cloudflare Access for $host" >&2
+    exit 1;;
+  esac
+  case "$redirect" in https://*.cloudflareaccess.com/*) ;; *)
+    echo "Cloudflare Access did not protect $host" >&2; exit 1;; esac
+done
+printf 'Fleet external commissioning verified: WorkOS, Cloudflare tunnel, Access apps and HTTPS routes.\n'

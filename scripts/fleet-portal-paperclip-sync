@@ -1,0 +1,149 @@
+#!/usr/bin/python3
+"""Idempotently install the portable Fleet Generation 2 task graph."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+from pathlib import Path
+from typing import Any
+
+API = "/opt/paperclip/ops/paperclip-board-api"
+TEMPLATE = Path("/opt/agency-os/current/config/paperclip-generation2-template.json")
+COMPANY_ID_FILE = Path("/etc/paperclip/company-id")
+AGENT_IDS_FILE = Path("/etc/paperclip/hermes-agent-ids.json")
+
+
+def api(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+    command = [API, method, path]
+    encoded = None
+    if payload is not None:
+        command.append("-")
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    result = subprocess.run(
+        command, input=encoded, check=True, capture_output=True, text=True,
+        timeout=120,
+    )
+    return json.loads(result.stdout)
+
+
+def issue_key(issue: dict[str, Any]) -> str:
+    return str(issue.get("title", "")).split(" — ", 1)[0]
+
+
+def unique_by_key(issues: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
+    matches = [issue for issue in issues if issue_key(issue) == key]
+    if len(matches) > 1:
+        raise SystemExit(f"Paperclip has duplicate {key} issues")
+    return matches[0] if matches else None
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verify-only", action="store_true")
+    args = parser.parse_args()
+    if os.geteuid() != 0:
+        raise SystemExit("root required")
+    if not TEMPLATE.is_file() or not COMPANY_ID_FILE.is_file():
+        raise SystemExit("the pinned template or appliance company binding is missing")
+    company_id = COMPANY_ID_FILE.read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"[0-9a-f-]{36}", company_id):
+        raise SystemExit("the appliance Paperclip company ID is invalid")
+    template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
+    entries = template.get("issues")
+    if not isinstance(entries, list) or not entries:
+        raise SystemExit("the pinned Fleet programme template is invalid")
+
+    projects = api("GET", f"/companies/{company_id}/projects")
+    project_name = str(template["project"]["name"])
+    project_matches = [item for item in projects if item.get("name") == project_name]
+    if len(project_matches) > 1:
+        raise SystemExit("Paperclip has duplicate Fleet Generation 2 projects")
+    if project_matches:
+        project_id = str(project_matches[0]["id"])
+    else:
+        if args.verify_only:
+            raise SystemExit("Fleet Generation 2 project is missing")
+        agents = json.loads(AGENT_IDS_FILE.read_text(encoding="utf-8"))
+        project = api(
+            "POST", f"/companies/{company_id}/projects",
+            {
+                "name": project_name,
+                "description": "Dependency-and-evidence controlled Fleet Generation 2 programme.",
+                "status": "planned",
+                "leadAgentId": agents["agency-director"],
+            },
+        )
+        project_id = str(project["id"])
+
+    issues = api("GET", f"/companies/{company_id}/issues")
+    if not isinstance(issues, list):
+        raise SystemExit("Paperclip issue projection is invalid")
+    created_or_verified: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        key = str(entry["key"])
+        parent_key = entry.get("parent")
+        parent = created_or_verified.get(str(parent_key)) if parent_key else None
+        dependencies = []
+        for dependency_key in entry.get("depends_on", []):
+            dependency = created_or_verified.get(str(dependency_key)) or unique_by_key(
+                issues, str(dependency_key)
+            )
+            if dependency is None:
+                raise SystemExit(f"Paperclip dependency {dependency_key} is missing")
+            dependencies.append(str(dependency["id"]))
+        issue = unique_by_key(issues, key)
+        if issue is None:
+            if args.verify_only:
+                raise SystemExit(f"Paperclip {key} is missing")
+            description = (
+                f"Gate {entry['gate']}. Fleet acceptance is dependency-and-evidence controlled.\n\n"
+                "Acceptance evidence:\n- " + "\n- ".join(entry["acceptance"]) +
+                "\n\nSource: config/paperclip-generation2-template.json"
+            )
+            payload: dict[str, Any] = {
+                "title": f"{key} — {entry['title']}",
+                "description": description,
+                "status": "backlog", "priority": entry["priority"],
+                "workMode": "standard", "projectId": project_id,
+                "blockedByIssueIds": dependencies,
+                "idempotencyKey": f"fleet-generation2-{key.lower()}-v1",
+                "allowDuplicate": False,
+            }
+            if parent is not None:
+                payload["parentId"] = parent["id"]
+            issue = api("POST", f"/companies/{company_id}/issues", payload)
+            issues = api("GET", f"/companies/{company_id}/issues")
+            issue = unique_by_key(issues, key)
+            if issue is None:
+                raise SystemExit(f"Paperclip did not create {key}")
+        detail = api("GET", f"/issues/{issue['id']}")
+        expected_title = f"{key} — {entry['title']}"
+        if detail.get("title") != expected_title or detail.get("projectId") != project_id:
+            raise SystemExit(f"Paperclip {key} title or project binding drift")
+        expected_parent = None if parent is None else parent["id"]
+        if detail.get("parentId") != expected_parent:
+            raise SystemExit(f"Paperclip {key} parent drift")
+        actual_dependencies = {str(item["id"]) for item in detail.get("blockedBy", [])}
+        missing_dependencies = set(dependencies) - actual_dependencies
+        if missing_dependencies:
+            if args.verify_only:
+                raise SystemExit(f"Paperclip {key} is missing required blockers")
+            merged = sorted(actual_dependencies | set(dependencies))
+            api("PATCH", f"/issues/{issue['id']}", {"blockedByIssueIds": merged})
+            detail = api("GET", f"/issues/{issue['id']}")
+            if not set(dependencies).issubset(
+                {str(item["id"]) for item in detail.get("blockedBy", [])}
+            ):
+                raise SystemExit(f"Paperclip {key} blockers did not converge")
+        created_or_verified[key] = detail
+
+    state = "verified" if args.verify_only else "synchronized"
+    print(f"Fleet Generation 2 Paperclip task graph {state} for {company_id}.")
+
+
+if __name__ == "__main__":
+    main()

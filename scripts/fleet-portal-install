@@ -1,0 +1,127 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export DEBIAN_FRONTEND=noninteractive
+umask 077
+
+repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+# shellcheck disable=SC1091
+. "$repo/appliance.lock"
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+
+apt-get update
+apt-get install --yes \
+  "clamav=$CLAMAV_PACKAGE_VERSION" \
+  "poppler-utils=$POPPLER_UTILS_PACKAGE_VERSION" \
+  "tesseract-ocr=$TESSERACT_OCR_PACKAGE_VERSION"
+apt-mark hold clamav poppler-utils tesseract-ocr >/dev/null
+
+getent group fleet-authority >/dev/null || groupadd --system fleet-authority
+getent group fleet-authority-client >/dev/null || groupadd --system fleet-authority-client
+getent group fleet-command >/dev/null || groupadd --system fleet-command
+getent group fleet-portal >/dev/null || groupadd --system fleet-portal
+getent group fleet-ingest >/dev/null || groupadd --system fleet-ingest
+id fleet-portal >/dev/null 2>&1 || useradd --system --gid fleet-portal \
+  --groups fleet-ingest,fleet-authority-client --home-dir /nonexistent \
+  --shell /usr/sbin/nologin fleet-portal
+id fleet-ingest >/dev/null 2>&1 || useradd --system --gid fleet-ingest \
+  --home-dir /nonexistent --shell /usr/sbin/nologin fleet-ingest
+id fleet-authority >/dev/null 2>&1 || useradd --system --gid fleet-authority \
+  --groups fleet-authority-client,fleet-ingest --home-dir /nonexistent \
+  --shell /usr/sbin/nologin fleet-authority
+id fleet-command >/dev/null 2>&1 || useradd --system --gid fleet-command \
+  --groups fleet-authority-client --home-dir /nonexistent --shell /usr/sbin/nologin fleet-command
+usermod --groups fleet-ingest,fleet-authority-client fleet-portal
+usermod --groups fleet-authority-client,fleet-ingest fleet-authority
+usermod --groups fleet-authority-client fleet-command
+
+for service in fleet-portal-web.service fleet-portal-command-worker.service \
+  fleet-ingest-worker.service fleet-portal-authority.service; do
+  systemctl stop "$service" 2>/dev/null || true
+done
+"$repo/scripts/agency-os-install" >/dev/null
+install -d -o root -g root -m 0700 /etc/agency-os
+install -d -o fleet-authority -g fleet-authority -m 0700 /var/lib/agency-os
+for database in fleet-tenancy.sqlite3 fleet-brand-intelligence.sqlite3 fleet-portal.sqlite3; do
+  for file in "/var/lib/agency-os/$database" "/var/lib/agency-os/$database-wal" "/var/lib/agency-os/$database-shm"; do
+    if test -e "$file"; then
+      chown fleet-authority:fleet-authority "$file"
+      chmod 0600 "$file"
+    fi
+  done
+done
+install -d -o root -g root -m 0755 \
+  /opt/paperclip/integration/docs /opt/paperclip/integration/build/locks
+install -d -o root -g root -m 0755 /var/spool/agency-os
+install -d -o fleet-ingest -g fleet-ingest -m 0750 /var/spool/agency-os/fleet-ingest
+install -d -o fleet-portal -g fleet-ingest -m 2770 /var/spool/agency-os/fleet-ingest/incoming
+install -d -o fleet-ingest -g fleet-ingest -m 0770 /var/spool/agency-os/fleet-ingest/review
+for directory in processed rejected; do
+  install -d -o fleet-ingest -g fleet-ingest -m 0700 "/var/spool/agency-os/fleet-ingest/$directory"
+done
+
+portal_uid=$(id -u fleet-portal)
+command_uid=$(id -u fleet-command)
+authority_uid=$(id -u fleet-authority)
+authority_client_gid=$(getent group fleet-authority-client | cut -d: -f3)
+mutation_disabled=0
+if test -f /etc/agency-os/fleet-authority.env; then
+  mutation_disabled=$(awk -F= '$1=="FLEET_PORTAL_MUTATIONS_DISABLED" {print $2}' \
+    /etc/agency-os/fleet-authority.env)
+  case "$mutation_disabled" in 0|1) ;; *) mutation_disabled=0;; esac
+fi
+temporary=$(mktemp /etc/agency-os/.fleet-authority.XXXXXX)
+admin_subjects=
+if test -s /etc/agency-os/fleet-portal.env; then
+  admin_subjects=$(awk -F= '$1=="FLEET_PORTAL_ADMIN_USER_IDS" {print $2}' /etc/agency-os/fleet-portal.env)
+fi
+printf 'FLEET_AUTHORITY_ALLOWED_UIDS=%s,%s\nFLEET_AUTHORITY_WORKER_UIDS=%s\nFLEET_AUTHORITY_SOCKET_UID=%s\nFLEET_AUTHORITY_SOCKET_GID=%s\nFLEET_PORTAL_MUTATIONS_DISABLED=%s\nFLEET_PORTAL_ADMIN_SUBJECTS=%s\nFLEET_PORTAL_PRODUCTION_BRAND_ID=brand_fleet\n' \
+  "$portal_uid" "$command_uid" "$command_uid" "$authority_uid" "$authority_client_gid" \
+  "$mutation_disabled" "$admin_subjects" >"$temporary"
+install -o root -g root -m 0600 "$temporary" /etc/agency-os/fleet-authority.env
+rm -f -- "$temporary"
+
+"$repo/scripts/fleet-portal-credential-provision"
+"$repo/scripts/fleet-portal-paperclip-sync" >/dev/null
+
+for unit in "$repo"/files/systemd/fleet-portal-*.service \
+  "$repo"/files/systemd/fleet-ingest-worker.service; do
+  install -o root -g root -m 0644 "$unit" "/etc/systemd/system/$(basename "$unit")"
+done
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-configure" \
+  /usr/local/sbin/fleet-portal-configure
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-install" \
+  /usr/local/sbin/fleet-portal-install
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-mutations" \
+  /usr/local/sbin/fleet-portal-mutations
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-paperclip-sync" \
+  /usr/local/sbin/fleet-portal-paperclip-sync
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-credential-provision" \
+  /usr/local/sbin/fleet-portal-credential-provision
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-external-verify" \
+  /usr/local/sbin/fleet-portal-external-verify
+install -o root -g root -m 0755 "$repo/scripts/fleet-portal-prepare-approval" \
+  /usr/local/sbin/fleet-portal-prepare-approval
+install -o root -g root -m 0644 "$repo/docs/fleet-portal-operations.md" \
+  /opt/paperclip/integration/docs/fleet-portal-operations.md
+install -o root -g root -m 0644 "$repo/appliance.lock" \
+  /opt/paperclip/integration/build/appliance.lock
+install -o root -g root -m 0644 "$repo/locks/installed-assets.tsv" \
+  /opt/paperclip/integration/build/locks/installed-assets.tsv
+install -o root -g root -m 0755 "$repo/verify.sh" \
+  /usr/local/sbin/paperclip-appliance-verify
+systemctl daemon-reload
+systemctl enable --now fleet-portal-authority.service fleet-ingest-worker.service
+if test -s /etc/agency-os/fleet-portal.env; then
+  systemctl enable --now fleet-portal-web.service
+else
+  systemctl disable --now fleet-portal-web.service
+fi
+if test -s /etc/agency-os/fleet-command-paperclip.env && \
+    test -s /etc/agency-os/fleet-portal.env && \
+    test -s /etc/agency-os/fleet-commissioning.env; then
+  systemctl enable --now fleet-portal-command-worker.service
+else
+  systemctl disable --now fleet-portal-command-worker.service
+fi
+echo "Fleet portal runtime installed; configure external identity with fleet-portal-configure."

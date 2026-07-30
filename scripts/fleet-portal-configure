@@ -1,0 +1,113 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+test "$#" -eq 1 || { echo "usage: sudo fleet-portal-configure /secure/path/fleet-portal.env" >&2; exit 64; }
+source_file=$1
+test "${source_file#/}" != "$source_file" && test -f "$source_file" && test ! -L "$source_file" || {
+  echo "configuration must be an absolute, non-symlink regular file" >&2
+  exit 65
+}
+required=(WORKOS_CLIENT_ID WORKOS_API_KEY WORKOS_COOKIE_PASSWORD \
+  NEXT_PUBLIC_WORKOS_REDIRECT_URI FLEET_WORKOS_ORGANIZATION_ID \
+  FLEET_OWNER_WORKOS_SUBJECT CLOUDFLARE_ACCESS_TEAM_DOMAIN \
+  CLOUDFLARE_PORTAL_ACCESS_AUDIENCE CLOUDFLARE_ADMIN_ACCESS_AUDIENCE \
+  FLEET_PORTAL_ADMIN_USER_IDS \
+  CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_TUNNEL_ID \
+  CLOUDFLARE_PORTAL_ACCESS_APP_ID CLOUDFLARE_ADMIN_ACCESS_APP_ID)
+for key in "${required[@]}"; do
+  test "$(grep -c "^${key}=" "$source_file")" -eq 1 || {
+    echo "missing or duplicate configuration key: $key" >&2
+    exit 65
+  }
+  value=$(grep -m1 "^${key}=" "$source_file" | cut -d= -f2-)
+  test -n "$value" && [[ "$value" =~ ^[A-Za-z0-9_./:@+=,-]+$ ]] || {
+    echo "configuration value has an unsafe format: $key" >&2
+    exit 65
+  }
+done
+cookie=$(grep -m1 '^WORKOS_COOKIE_PASSWORD=' "$source_file" | cut -d= -f2-)
+test "${#cookie}" -ge 32 || { echo "WORKOS_COOKIE_PASSWORD must be at least 32 characters" >&2; exit 65; }
+redirect=$(grep -m1 '^NEXT_PUBLIC_WORKOS_REDIRECT_URI=' "$source_file" | cut -d= -f2-)
+test "$redirect" = 'https://fleet.madebyfleet.com/auth/callback' || {
+  echo "WorkOS redirect URI must exactly match the Fleet callback" >&2
+  exit 65
+}
+team=$(grep -m1 '^CLOUDFLARE_ACCESS_TEAM_DOMAIN=' "$source_file" | cut -d= -f2-)
+[[ "$team" =~ ^[a-z0-9-]+\.cloudflareaccess\.com$ ]] || {
+  echo "Cloudflare Access team domain is invalid" >&2
+  exit 65
+}
+
+temporary=$(mktemp /etc/agency-os/.fleet-portal.XXXXXX)
+runtime_keys=(WORKOS_CLIENT_ID WORKOS_API_KEY WORKOS_COOKIE_PASSWORD \
+  NEXT_PUBLIC_WORKOS_REDIRECT_URI FLEET_WORKOS_ORGANIZATION_ID \
+  CLOUDFLARE_ACCESS_TEAM_DOMAIN CLOUDFLARE_PORTAL_ACCESS_AUDIENCE \
+  CLOUDFLARE_ADMIN_ACCESS_AUDIENCE \
+  FLEET_PORTAL_ADMIN_USER_IDS)
+for key in "${runtime_keys[@]}"; do
+  grep -m1 "^${key}=" "$source_file" >>"$temporary"
+done
+printf '%s\n' \
+  'WORKOS_COOKIE_MAX_AGE=43200' \
+  'WORKOS_COOKIE_SAMESITE=lax' \
+  'FLEET_PORTAL_IDENTITY_MODE=workos' \
+  'FLEET_PORTAL_CLIENT_HOST=fleet.madebyfleet.com' \
+  'FLEET_PORTAL_ADMIN_HOST=admin.madebyfleet.com' \
+  'FLEET_PORTAL_AUTHORITY_SOCKET=/run/agency-os/fleet-authority.sock' \
+  'FLEET_INGEST_SPOOL=/var/spool/agency-os/fleet-ingest/incoming' >>"$temporary"
+install -o root -g root -m 0600 "$temporary" /etc/agency-os/fleet-portal.env
+rm -f -- "$temporary"
+commissioning=$(mktemp /etc/agency-os/.fleet-commissioning.XXXXXX)
+for key in WORKOS_API_KEY FLEET_WORKOS_ORGANIZATION_ID FLEET_OWNER_WORKOS_SUBJECT \
+  CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_TUNNEL_ID \
+  CLOUDFLARE_PORTAL_ACCESS_APP_ID CLOUDFLARE_ADMIN_ACCESS_APP_ID \
+  CLOUDFLARE_PORTAL_ACCESS_AUDIENCE CLOUDFLARE_ADMIN_ACCESS_AUDIENCE; do
+  grep -m1 "^${key}=" "$source_file" >>"$commissioning"
+done
+install -o root -g root -m 0600 "$commissioning" /etc/agency-os/fleet-commissioning.env
+rm -f -- "$commissioning"
+
+organization=$(grep -m1 '^FLEET_WORKOS_ORGANIZATION_ID=' "$source_file" | cut -d= -f2-)
+subject=$(grep -m1 '^FLEET_OWNER_WORKOS_SUBJECT=' "$source_file" | cut -d= -f2-)
+for service in fleet-portal-web.service fleet-portal-command-worker.service \
+  fleet-ingest-worker.service fleet-portal-authority.service; do
+  systemctl stop "$service" 2>/dev/null || true
+done
+FLEET_WORKOS_ORGANIZATION_ID="$organization" \
+  /usr/bin/python3 /opt/agency-os/current/scripts/initialize_fleet_tenant.py \
+  --config /opt/agency-os/current/config/fleet-generation2.json \
+  --assert-company-id-file /etc/paperclip/company-id >/dev/null
+/usr/bin/python3 /opt/agency-os/current/scripts/initialize_fleet_portal.py \
+  --database /var/lib/agency-os/fleet-portal.sqlite3 \
+  --workos-organization-id "$organization" --workos-subject "$subject" >/dev/null
+for database in fleet-tenancy.sqlite3 fleet-brand-intelligence.sqlite3 fleet-portal.sqlite3; do
+  for file in "/var/lib/agency-os/$database" "/var/lib/agency-os/$database-wal" "/var/lib/agency-os/$database-shm"; do
+    if test -e "$file"; then
+      chown fleet-authority:fleet-authority "$file"
+      chmod 0600 "$file"
+    fi
+  done
+done
+systemctl enable --now fleet-portal-authority.service fleet-ingest-worker.service \
+  fleet-portal-web.service
+ready=false
+for _ in $(seq 1 30); do
+  if curl --fail --silent --max-time 2 http://127.0.0.1:3190/health |
+      jq -e '.status=="pass" and .service=="fleet-portal-web" and
+        .authority=="fleet_portal"' >/dev/null 2>&1; then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+"$ready" || { systemctl status fleet-portal-web.service --no-pager >&2 || true; exit 1; }
+if ! /usr/local/sbin/fleet-portal-external-verify /etc/agency-os/fleet-commissioning.env; then
+  systemctl stop fleet-portal-web.service
+  echo "external commissioning failed; public portal and command worker were stopped" >&2
+  exit 1
+fi
+systemctl enable --now fleet-portal-command-worker.service
+echo "Fleet portal configured and verified through WorkOS and Cloudflare Access."

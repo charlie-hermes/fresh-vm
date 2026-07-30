@@ -54,7 +54,8 @@ sudo env PAPERCLIP_COMPANY_NAME="Client Name" ./bootstrap.sh
 - Hermes `0.19.0` at commit
   `7de554277de632364c74fcf8641daa58a9a977d9`;
 - Agency OS at its exact reviewed commit, with Core, Social, provider handoffs,
-  two-brand isolation checks, and a loopback-only read-only operator portal;
+  two-brand isolation checks, a loopback-only read-only operator portal, and
+  the G2.6 Fleet client portal runtime;
 - a digest-pinned Python/Node Docker sandbox and isolated Docker bridge;
 - all 12 approved Agency OS employees, each with a separate Hermes home,
   workspace, exact
@@ -108,7 +109,15 @@ Start with:
 - `docs/core-role-activation.md`
 - `docs/agency-os-operating-guide.md`
 - `docs/operations-runbook.md`
+- `docs/fleet-portal-operations.md`
 - `docs/rollback.md`
+
+The Fleet portal has a second, explicit configuration step because WorkOS and
+Cloudflare credentials are never fabricated or stored in Git:
+
+```bash
+sudo fleet-portal-configure /absolute/secure/path/fleet-portal.env
+```
 
 Bootstrap logs are in `/var/log/paperclip-appliance/bootstrap.log`. Service
 state is visible with:

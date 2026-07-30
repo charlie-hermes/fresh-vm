@@ -1,0 +1,26 @@
+#!/bin/bash
+set -Eeuo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 077
+
+test "$(id -u)" -eq 0 || { echo "root required" >&2; exit 77; }
+case "${1:-}" in disable) value=1;; enable) value=0;; *)
+  echo "usage: sudo fleet-portal-mutations enable|disable" >&2
+  exit 64;;
+esac
+environment=/etc/agency-os/fleet-authority.env
+test -f "$environment" && test ! -L "$environment" || {
+  echo "Fleet authority environment is missing or unsafe" >&2
+  exit 65
+}
+temporary=$(mktemp /etc/agency-os/.fleet-authority.XXXXXX)
+grep -v '^FLEET_PORTAL_MUTATIONS_DISABLED=' "$environment" >"$temporary"
+printf 'FLEET_PORTAL_MUTATIONS_DISABLED=%s\n' "$value" >>"$temporary"
+install -o root -g root -m 0600 "$temporary" "$environment"
+rm -f -- "$temporary"
+systemctl restart fleet-portal-authority.service
+if test "$value" -eq 1; then
+  echo "Fleet portal mutations are disabled; reads and evidence remain available."
+else
+  echo "Fleet portal mutations are enabled."
+fi

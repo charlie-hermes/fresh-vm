@@ -26,5 +26,12 @@ emit scripts/credential-install /usr/local/sbin/paperclip-hermes-credential-inst
 emit scripts/core-role-transition /usr/local/sbin/paperclip-core-role-transition
 emit scripts/runtime-bundle-verify /opt/paperclip/ops/runtime-bundle-verify
 emit scripts/agency-os-install /usr/local/sbin/agency-os-install
+emit scripts/fleet-portal-install /usr/local/sbin/fleet-portal-install
+emit scripts/fleet-portal-configure /usr/local/sbin/fleet-portal-configure
+emit scripts/fleet-portal-mutations /usr/local/sbin/fleet-portal-mutations
+emit scripts/fleet-portal-paperclip-sync /usr/local/sbin/fleet-portal-paperclip-sync
+emit scripts/fleet-portal-credential-provision /usr/local/sbin/fleet-portal-credential-provision
+emit scripts/fleet-portal-external-verify /usr/local/sbin/fleet-portal-external-verify
+emit scripts/fleet-portal-prepare-approval /usr/local/sbin/fleet-portal-prepare-approval
 emit verify.sh /usr/local/sbin/paperclip-appliance-verify
 emit appliance.lock /opt/paperclip/integration/build/appliance.lock

@@ -1,0 +1,30 @@
+[Unit]
+Description=Fleet no-network source scan and extraction worker
+After=local-fs.target
+
+[Service]
+Type=simple
+User=fleet-ingest
+Group=fleet-ingest
+WorkingDirectory=/opt/agency-os/current
+ExecStart=/usr/bin/python3 -m agency_os.fleet_ingest_worker --spool-root /var/spool/agency-os/fleet-ingest --watch --poll-seconds 1
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateNetwork=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/var/spool/agency-os/fleet-ingest
+
+[Install]
+WantedBy=multi-user.target

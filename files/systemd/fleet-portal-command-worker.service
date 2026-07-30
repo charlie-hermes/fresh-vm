@@ -1,0 +1,39 @@
+[Unit]
+Description=Fleet portal restricted Paperclip command worker
+After=network-online.target paperclip.service fleet-portal-authority.service
+Wants=network-online.target
+Requires=paperclip.service fleet-portal-authority.service
+
+[Service]
+Type=simple
+User=fleet-command
+Group=fleet-command
+SupplementaryGroups=fleet-authority-client
+EnvironmentFile=/etc/agency-os/fleet-command-paperclip.env
+WorkingDirectory=/opt/agency-os/current
+ExecStart=/usr/bin/python3 -m agency_os.fleet_portal_command_worker --socket /run/agency-os/fleet-authority.sock
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=172.30.0.1
+ReadOnlyPaths=/run/agency-os/fleet-authority.sock
+PrivateDevices=true
+ProtectProc=invisible
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

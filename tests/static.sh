@@ -13,8 +13,13 @@ test "$(tests/generate-manifest.sh)" = "$(cat MANIFEST.sha256)"
 
 for script in bootstrap.sh configure-secrets.sh verify.sh scripts/* \
   files/factory/skills/paperclip-employee/scripts/* tests/*.sh; do
+  test -f "$script" || continue
   case "$script" in *.md) continue ;; esac
-  bash -n "$script"
+  case "$(head -n 1 "$script")" in
+    *python*) python3 -m py_compile "$script" ;;
+    *'/bin/sh'*) sh -n "$script" ;;
+    *) bash -n "$script" ;;
+  esac
 done
 for script in files/ops/*; do
   case "$(head -n 1 "$script")" in
@@ -94,6 +99,42 @@ grep -q 'agency-os-brand-agent-activate' files/ops/agency-os-activate
 grep -q 'agency-os-brand-agent-verify' verify.sh
 grep -q -- '--host 127.0.0.1 --port 3181' files/systemd/agency-os-brand-agent.service
 grep -q 'ReadWritePaths=/var/lib/agency-os' files/systemd/agency-os-brand-agent.service
+for unit in fleet-portal-authority.service fleet-portal-command-worker.service \
+  fleet-ingest-worker.service fleet-portal-web.service; do
+  test -f "files/systemd/$unit"
+done
+grep -q 'PrivateNetwork=true' files/systemd/fleet-ingest-worker.service
+grep -q 'User=fleet-portal' files/systemd/fleet-portal-web.service
+! grep -q 'PAPERCLIP_' files/systemd/fleet-portal-web.service
+grep -q '^User=fleet-authority$' files/systemd/fleet-portal-authority.service
+grep -q '^SupplementaryGroups=fleet-authority-client fleet-ingest$' \
+  files/systemd/fleet-portal-authority.service
+! grep -q 'SupplementaryGroups=.*fleet-command' files/systemd/fleet-portal-authority.service
+grep -q '^User=fleet-command$' files/systemd/fleet-portal-command-worker.service
+grep -q '^EnvironmentFile=/etc/agency-os/fleet-command-paperclip.env$' \
+  files/systemd/fleet-portal-command-worker.service
+! grep -q 'operator.env' files/systemd/fleet-portal-command-worker.service
+grep -q '^IPAddressDeny=any$' files/systemd/fleet-portal-command-worker.service
+grep -q '^IPAddressAllow=172.30.0.1$' files/systemd/fleet-portal-command-worker.service
+grep -q 'CLOUDFLARE_PORTAL_ACCESS_AUDIENCE' scripts/fleet-portal-configure
+grep -q 'CLOUDFLARE_ADMIN_ACCESS_AUDIENCE' scripts/fleet-portal-configure
+grep -q 'organization_memberships' scripts/fleet-portal-external-verify
+grep -q 'status=="healthy"' scripts/fleet-portal-external-verify
+grep -q 'unauthenticated HTTPS route was not intercepted' scripts/fleet-portal-external-verify
+grep -q 'prepare_fleet_portal_approval.py' scripts/fleet-portal-prepare-approval
+! grep -q 'd7e2e389-c7ad-486e-87ca-482e4ec6216d' scripts/fleet-portal-paperclip-sync
+grep -q '127.0.0.1:3190' verify.sh
+grep -q 'fleet-portal-configure' bootstrap.sh
+grep -q 'Existing initialized appliance detected; install the pinned G2.6 portal release' bootstrap.sh
+grep -q '"$repo/scripts/fleet-portal-install"' bootstrap.sh
+grep -q 'npm ci --prefix fleet-portal' scripts/agency-os-install
+grep -q 'chmod -R a+rX,u+w,go-w "$target"' scripts/agency-os-install
+grep -q '/opt/paperclip/integration/build/appliance.lock' scripts/fleet-portal-install
+grep -q '/usr/local/sbin/paperclip-appliance-verify' scripts/fleet-portal-install
+grep -q 'fleet-portal-paperclip-sync' scripts/fleet-portal-install
+grep -q 'systemctl disable --now fleet-portal-web.service' scripts/fleet-portal-install
+grep -q 'systemctl disable --now fleet-portal-command-worker.service' scripts/fleet-portal-install
+grep -q 'fleet-portal-paperclip-sync --verify-only' verify.sh
 for field in verification-result.json output_lines required_lines exit_status \
   verifier_sha256 appliance_lock_sha256 installed_assets_sha256 g2_summary brand_agent_summary; do
   grep -q "$field" verify.sh

@@ -1,0 +1,126 @@
+# Fleet G2.6 portal operations
+
+## What is installed
+
+G2.6 runs four separate services:
+
+- `fleet-portal-web.service` is the unprivileged Next.js portal on
+  `127.0.0.1:3190`. It has no Paperclip credential and no authority database
+  access.
+- `fleet-portal-authority.service` owns protected portal membership, session,
+  command and catalogue data and accepts only the portal process over a local
+  Unix socket.
+- `fleet-portal-command-worker.service` is the only portal component that can
+  deliver a restricted decision to Paperclip.
+- `fleet-ingest-worker.service` scans and extracts uploads without network
+  access. Its output always requires review.
+
+The installer verifies the complete pinned Fleet Generation 2 Paperclip task
+graph, including every required dependency. It preserves additional human-added
+blockers and never starts the first external-client gate.
+
+Paperclip remains private at `172.30.0.1:3100`. The client portal must be
+reached through Cloudflare Access and a Cloudflare Tunnel to the loopback web
+service. Do not publish port 3190 directly.
+
+## Required external setup
+
+Create these in WorkOS:
+
+1. a production AuthKit application;
+2. the exact redirect URI
+   `https://fleet.madebyfleet.com/auth/callback`;
+3. one WorkOS organisation for the Fleet DMA customer account; and
+4. the initial Fleet owner user in that organisation.
+
+Create these in Cloudflare Zero Trust:
+
+1. a client Access application for `fleet.madebyfleet.com`;
+2. a separate Fleet-only Access application for `admin.madebyfleet.com`;
+3. distinct Access audiences for the client and admin applications;
+4. a Tunnel route from both hosts to `http://127.0.0.1:3190`; and
+5. policies that deny access unless the expected identity is present.
+
+The client and administrator policies must remain separate even while Fleet
+DMA is the only production tenant.
+
+## Configure secrets without putting them in the shell history
+
+Create a root-readable file outside Git with exactly these keys and real
+values:
+
+```text
+WORKOS_CLIENT_ID=client_replace
+WORKOS_API_KEY=sk_replace
+WORKOS_COOKIE_PASSWORD=replace_with_at_least_32_random_characters
+NEXT_PUBLIC_WORKOS_REDIRECT_URI=https://fleet.madebyfleet.com/auth/callback
+FLEET_WORKOS_ORGANIZATION_ID=org_replace
+FLEET_OWNER_WORKOS_SUBJECT=user_replace
+CLOUDFLARE_ACCESS_TEAM_DOMAIN=replace.cloudflareaccess.com
+CLOUDFLARE_PORTAL_ACCESS_AUDIENCE=replace_with_client_app_aud
+CLOUDFLARE_ADMIN_ACCESS_AUDIENCE=replace_with_admin_app_aud
+FLEET_PORTAL_ADMIN_USER_IDS=user_replace
+CLOUDFLARE_API_TOKEN=replace_with_read_only_commissioning_token
+CLOUDFLARE_ACCOUNT_ID=replace
+CLOUDFLARE_TUNNEL_ID=replace
+CLOUDFLARE_PORTAL_ACCESS_APP_ID=replace
+CLOUDFLARE_ADMIN_ACCESS_APP_ID=replace
+```
+
+Do not add an approval ID to this configuration. Once a client has confirmed a
+fact in the Launch Room, Fleet creates its exact Paperclip decision packet with:
+
+```bash
+sudo fleet-portal-prepare-approval --candidate-id candidate_replace
+```
+
+The command checkpoints the request before contacting Paperclip, reads the
+pending approval back, binds it to the exact source, candidate and review
+checksums, and is safe to rerun. If Paperclip's outcome is uncertain, it stops
+for reconciliation instead of creating a second approval.
+
+Then run:
+
+```bash
+sudo fleet-portal-configure /absolute/secure/path/fleet-portal.env
+```
+
+The command validates the file, proves the WorkOS organisation and owner,
+proves the healthy Cloudflare Tunnel, exact loopback routes, separate Access
+applications and policies, saves only the service configuration with mode
+`0600`, admits the Fleet DMA owner, and starts the four services. It never
+prints a secret.
+
+## Cloudflare health and exposure
+
+The local check is:
+
+```bash
+curl --fail --silent http://127.0.0.1:3190/health | jq
+```
+
+Expected authority is `fleet_portal`. Also confirm the VM listens only on
+loopback:
+
+```bash
+sudo ss -ltnp | grep ':3190'
+```
+
+After the Tunnel is configured, visit `https://fleet.madebyfleet.com`. A user
+must pass Cloudflare Access and WorkOS and must match the stored organisation,
+membership and exact hostname.
+
+## Safe rollback
+
+To stop writes while preserving all evidence:
+
+```bash
+sudo fleet-portal-mutations disable
+```
+
+For a full portal rollback, disable the Cloudflare route and stop the portal
+and worker services. Do not delete `/var/lib/agency-os/fleet-portal.sqlite3` or
+the ingest evidence directories.
+
+After the cause is resolved and reviewed, restore writes with
+`sudo fleet-portal-mutations enable`.

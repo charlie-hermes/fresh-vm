@@ -23,10 +23,16 @@ if ! git -C "$target" cat-file -e "$AGENCY_OS_COMMIT^{commit}" 2>/dev/null; then
 fi
 git -C "$target" checkout --detach "$AGENCY_OS_COMMIT"
 test "$(git -C "$target" rev-parse HEAD)" = "$AGENCY_OS_COMMIT"
+(cd "$target" && npm ci --prefix fleet-portal --ignore-scripts --no-audit --no-fund)
 (cd "$target" && ./scripts/verify >/dev/null)
+install -d -o root -g root -m 0755 "$target/fleet-portal/.next/standalone/.next"
+cp -a "$target/fleet-portal/.next/static" \
+  "$target/fleet-portal/.next/standalone/.next/static"
+if test -d "$target/fleet-portal/public"; then
+  cp -a "$target/fleet-portal/public" "$target/fleet-portal/.next/standalone/public"
+fi
 chown -R root:root "$target"
-find "$target" -type d -exec chmod go-w {} +
-find "$target" -type f -exec chmod go-w {} +
+chmod -R a+rX,u+w,go-w "$target"
 next_link=$target_root/.current.$$
 ln -s "$target" "$next_link"
 mv -Tf "$next_link" "$target_root/current"

@@ -114,10 +114,14 @@ systemctl daemon-reload
 systemctl enable --now fleet-portal-authority.service fleet-ingest-worker.service
 if test -s /etc/agency-os/fleet-portal.env; then
   systemctl enable --now fleet-portal-web.service
+else
+  systemctl disable --now fleet-portal-web.service
 fi
 if test -s /etc/agency-os/fleet-command-paperclip.env && \
     test -s /etc/agency-os/fleet-portal.env && \
     test -s /etc/agency-os/fleet-commissioning.env; then
   systemctl enable --now fleet-portal-command-worker.service
+else
+  systemctl disable --now fleet-portal-command-worker.service
 fi
 echo "Fleet portal runtime installed; configure external identity with fleet-portal-configure."

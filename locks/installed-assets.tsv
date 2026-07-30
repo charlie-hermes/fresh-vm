@@ -97,7 +97,7 @@ e779da7c1860f11eeed85fed5dc640a025d4c94ff854cb2a25146eea75ea1226	scripts/credent
 a41667b67dd310655e1c689f5c44c8db6c03b8e54362bd0664d9a193afb36747	scripts/core-role-transition	/usr/local/sbin/paperclip-core-role-transition
 640673d8710590d797e8b02adb7d39f30d223bc1ca42813b70f5abef2a8d19c8	scripts/runtime-bundle-verify	/opt/paperclip/ops/runtime-bundle-verify
 ad9a38badf7b18ac0402d7da5ad1376764f078e2e26eb9de1769284ff0d9c22c	scripts/agency-os-install	/usr/local/sbin/agency-os-install
-0ca6dd1b3ea3222858470daffc9d3fe7717420dece0cc3d579fdaf998e6ae170	scripts/fleet-portal-install	/usr/local/sbin/fleet-portal-install
+1a803ed7218a9471c585eff23b1b82f5ec61d94479e0bef589d2cbb472a923f7	scripts/fleet-portal-install	/usr/local/sbin/fleet-portal-install
 d70160f0afb66e95c8928b79ed251a97c29308bf17513790b6f1f848488d126e	scripts/fleet-portal-configure	/usr/local/sbin/fleet-portal-configure
 2d7dbc19883fd6a3b13e6e259a500815d0f2cf85b7a950017705b6bb0f0df65f	scripts/fleet-portal-mutations	/usr/local/sbin/fleet-portal-mutations
 80b5e59c8434c72e54b7d6ab5d6e6af2570a3f93c10d8d18e7640fd4af8517ca	scripts/fleet-portal-paperclip-sync	/usr/local/sbin/fleet-portal-paperclip-sync
